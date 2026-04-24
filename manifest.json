@@ -2,6 +2,14 @@
   "manifest_version": 3,
   "name": "LinkFlow",
   "version": "1.0.0",
+    "browser_specific_settings": {
+    "gecko": {
+      "id": "ankitmaurya2989@gmail.com",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
   "description": "A modern bookmark manager with folder organization and AI-powered research playground",
   "icons": {
     "16": "icons/icon-16.png",

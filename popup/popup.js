@@ -323,12 +323,16 @@ class PopupController {
 
       // Visual feedback
       const btn = document.getElementById('saveCurrentTabBtn');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<span class="btn-icon">✓</span> Saved!';
+      const originalNodes = Array.from(btn.childNodes);
+      btn.replaceChildren();
+      const icon = document.createElement('span');
+      icon.className = 'btn-icon';
+      icon.textContent = '✓';
+      btn.append(icon, ' Saved!');
       btn.style.background = 'var(--success)';
 
       setTimeout(() => {
-        btn.innerHTML = originalText;
+        btn.replaceChildren(...originalNodes);
         btn.style.background = '';
       }, 1500);
     } catch (err) {
@@ -453,9 +457,11 @@ class PopupController {
     // Populate tabs
     const tabs = await storage.getTabs();
     const tabSelect = document.getElementById('moveToTab');
-    tabSelect.innerHTML = tabs.map(tab =>
-      `<option value="${tab.id}" ${tab.id === this.currentTab ? 'selected' : ''}>${tab.name}</option>`
-    ).join('');
+    tabSelect.replaceChildren();
+    for (const tab of tabs) {
+      const opt = new Option(tab.name, tab.id, false, tab.id === this.currentTab);
+      tabSelect.add(opt);
+    }
 
     // Populate folders for current tab
     await this.updateMoveFolderOptions();
@@ -474,10 +480,11 @@ class PopupController {
     const selectedTab = tabSelect.value;
 
     const folders = await storage.getFolders(selectedTab);
-    folderSelect.innerHTML = '<option value="">No Folder (Root)</option>' +
-      folders.map(folder =>
-        `<option value="${folder.id}">${folder.name}</option>`
-      ).join('');
+    folderSelect.replaceChildren();
+    folderSelect.add(new Option('No Folder (Root)', ''));
+    for (const folder of folders) {
+      folderSelect.add(new Option(folder.name, folder.id));
+    }
   }
 
   async confirmMove() {

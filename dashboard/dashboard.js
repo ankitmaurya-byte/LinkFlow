@@ -294,10 +294,11 @@ class DashboardController {
       await this.render();
 
       const btn = document.getElementById('saveCurrentTabBtn');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '✓ Saved!';
+      const originalNodes = Array.from(btn.childNodes);
+      btn.replaceChildren();
+      btn.textContent = '✓ Saved!';
       setTimeout(() => {
-        btn.innerHTML = originalText;
+        btn.replaceChildren(...originalNodes);
       }, 2000);
     } catch (err) {
       console.error('Error saving tab:', err);

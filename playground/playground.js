@@ -116,30 +116,32 @@ class PlaygroundController {
     const icon = sender === 'user' ? '👤' : '🤖';
     const senderLabel = sender === 'user' ? 'You' : 'AI Assistant';
 
+    const header = document.createElement('div');
+    header.className = 'message-header';
+    const iconSpan = document.createElement('span');
+    iconSpan.textContent = icon;
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = senderLabel;
+    header.append(iconSpan, labelSpan);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
     if (isLoading) {
-      message.innerHTML = `
-        <div class="message-header">
-          <span>${icon}</span>
-          <span>${senderLabel}</span>
-        </div>
-        <div class="message-content">
-          <div class="loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        </div>
-      `;
+      const dots = document.createElement('div');
+      dots.className = 'loading-dots';
+      dots.append(
+        document.createElement('span'),
+        document.createElement('span'),
+        document.createElement('span')
+      );
+      contentDiv.appendChild(dots);
       message.dataset.loading = 'true';
     } else {
-      message.innerHTML = `
-        <div class="message-header">
-          <span>${icon}</span>
-          <span>${senderLabel}</span>
-        </div>
-        <div class="message-content">${this.escapeHtml(content)}</div>
-      `;
+      contentDiv.textContent = content;
     }
+
+    message.append(header, contentDiv);
 
     resultsContainer.appendChild(message);
     resultsContainer.scrollTop = resultsContainer.scrollHeight;

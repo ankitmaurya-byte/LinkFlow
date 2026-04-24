@@ -7,16 +7,34 @@ function createLinkCard(link, callbacks = {}) {
 
   const icon = PlatformDetector.getIcon(link.platform);
 
-  card.innerHTML = `
-    <div class="link-icon">${icon}</div>
-    <div class="link-content">
-      <div class="link-title">${escapeHtml(link.title)}</div>
-      <span class="link-url" data-url="${escapeHtml(link.url)}" title="Click to copy">${escapeHtml(truncateUrl(link.url))}</span>
-    </div>
-    <div class="link-actions">
-      <button class="menu-btn" data-link-id="${link.id}">⋮</button>
-    </div>
-  `;
+  const iconDiv = document.createElement('div');
+  iconDiv.className = 'link-icon';
+  iconDiv.textContent = icon;
+
+  const content = document.createElement('div');
+  content.className = 'link-content';
+
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'link-title';
+  titleDiv.textContent = link.title;
+
+  const urlSpan = document.createElement('span');
+  urlSpan.className = 'link-url';
+  urlSpan.dataset.url = link.url;
+  urlSpan.title = 'Click to copy';
+  urlSpan.textContent = truncateUrl(link.url);
+
+  content.append(titleDiv, urlSpan);
+
+  const actions = document.createElement('div');
+  actions.className = 'link-actions';
+  const menuBtn = document.createElement('button');
+  menuBtn.className = 'menu-btn';
+  menuBtn.dataset.linkId = link.id;
+  menuBtn.textContent = '⋮';
+  actions.appendChild(menuBtn);
+
+  card.append(iconDiv, content, actions);
 
   // Click on card to open link
   card.addEventListener('click', (e) => {
@@ -71,7 +89,6 @@ function createLinkCard(link, callbacks = {}) {
   });
 
   // Menu button
-  const menuBtn = card.querySelector('.menu-btn');
   menuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     showLinkMenu(e.target, link, callbacks);

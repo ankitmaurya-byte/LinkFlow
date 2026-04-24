@@ -5,14 +5,28 @@ function createFolderCard(folder, itemCount = 0, onClick) {
   card.className = 'card folder-card';
   card.dataset.folderId = folder.id;
 
-  card.innerHTML = `
-    <div class="folder-icon">📁</div>
-    <div class="folder-content">
-      <div class="folder-name">${escapeHtml(folder.name)}</div>
-      <div class="folder-count">${itemCount} item${itemCount !== 1 ? 's' : ''}</div>
-    </div>
-    <div class="folder-arrow">→</div>
-  `;
+  const iconDiv = document.createElement('div');
+  iconDiv.className = 'folder-icon';
+  iconDiv.textContent = '📁';
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'folder-content';
+
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'folder-name';
+  nameDiv.textContent = folder.name;
+
+  const countDiv = document.createElement('div');
+  countDiv.className = 'folder-count';
+  countDiv.textContent = `${itemCount} item${itemCount !== 1 ? 's' : ''}`;
+
+  contentDiv.append(nameDiv, countDiv);
+
+  const arrowDiv = document.createElement('div');
+  arrowDiv.className = 'folder-arrow';
+  arrowDiv.textContent = '→';
+
+  card.append(iconDiv, contentDiv, arrowDiv);
 
   card.addEventListener('click', () => {
     if (onClick) {
