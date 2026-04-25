@@ -4,6 +4,7 @@ import { router as authRouter, meRouter } from './routes/auth.js';
 import { router as bookmarksRouter } from './routes/bookmarks.js';
 import { router as friendsRouter, userBookmarksRouter } from './routes/friends.js';
 import { router as groupsRouter } from './routes/groups.js';
+import { router as chatRouter } from './routes/chat.js';
 
 export function createApp() {
   const app = express();
@@ -17,6 +18,7 @@ export function createApp() {
   app.use('/friends', friendsRouter);
   app.use(userBookmarksRouter);
   app.use('/groups', groupsRouter);
+  app.use('/groups/:id/chat', chatRouter);
 
   app.use(notFound);
   app.use(errorHandler);
