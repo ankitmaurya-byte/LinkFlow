@@ -3,6 +3,7 @@ import { errorHandler, notFound } from './middleware/error.js';
 import { router as authRouter, meRouter } from './routes/auth.js';
 import { router as bookmarksRouter } from './routes/bookmarks.js';
 import { router as friendsRouter, userBookmarksRouter } from './routes/friends.js';
+import { router as groupsRouter } from './routes/groups.js';
 
 export function createApp() {
   const app = express();
@@ -15,6 +16,7 @@ export function createApp() {
   app.use('/bookmarks', bookmarksRouter);
   app.use('/friends', friendsRouter);
   app.use(userBookmarksRouter);
+  app.use('/groups', groupsRouter);
 
   app.use(notFound);
   app.use(errorHandler);
