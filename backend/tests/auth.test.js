@@ -63,4 +63,21 @@ describe('auth', () => {
     expect(res.status).toBe(200);
     expect(res.body.user.username).toBe('alice');
   });
+
+  it('refreshes tokens (rotate) and old refresh becomes invalid', async () => {
+    const { refreshToken } = await signupUser(app, 'alice');
+    const r1 = await request(app).post('/auth/refresh').send({ refreshToken });
+    expect(r1.status).toBe(200);
+    expect(r1.body.refreshToken).not.toBe(refreshToken);
+    const r2 = await request(app).post('/auth/refresh').send({ refreshToken });
+    expect(r2.status).toBe(401);
+  });
+
+  it('logout revokes refresh token', async () => {
+    const { refreshToken } = await signupUser(app, 'alice');
+    const out = await request(app).post('/auth/logout').send({ refreshToken });
+    expect(out.status).toBe(204);
+    const r = await request(app).post('/auth/refresh').send({ refreshToken });
+    expect(r.status).toBe(401);
+  });
 });

@@ -1,7 +1,7 @@
 import express from 'express';
 import { User } from '../models/user.js';
 import { hashPassword, verifyPassword } from '../services/passwords.js';
-import { signAccess, issueRefresh } from '../services/tokens.js';
+import { signAccess, issueRefresh, rotateRefresh, revokeRefresh } from '../services/tokens.js';
 import { AppError } from '../middleware/error.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -48,6 +48,28 @@ router.post('/login', async (req, res, next) => {
     const accessToken = signAccess({ userId: user._id, username: user.username });
     const { token: refreshToken } = await issueRefresh(user._id);
     res.json({ accessToken, refreshToken, user: publicUser(user) });
+  } catch (e) { next(e); }
+});
+
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body || {};
+    if (typeof refreshToken !== 'string') {
+      throw new AppError('VALIDATION', 'refreshToken required', 400);
+    }
+    const rotated = await rotateRefresh(refreshToken);
+    const user = await User.findById(rotated.record.userId);
+    if (!user) throw new AppError('AUTH_INVALID', 'User missing', 401);
+    const accessToken = signAccess({ userId: user._id, username: user.username });
+    res.json({ accessToken, refreshToken: rotated.token });
+  } catch (e) { next(e); }
+});
+
+router.post('/logout', async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body || {};
+    if (typeof refreshToken === 'string') await revokeRefresh(refreshToken);
+    res.status(204).end();
   } catch (e) { next(e); }
 });
 
