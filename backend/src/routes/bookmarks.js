@@ -105,3 +105,20 @@ router.patch('/:id', async (req, res, next) => {
     res.json({ bookmark: publicBookmark(bm) });
   } catch (e) { next(e); }
 });
+
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const id = parseObjectId(req.params.id, 'id');
+    const bm = await Bookmark.findOne({ _id: id, ownerId: req.user.id });
+    if (!bm) throw new AppError('NOT_FOUND', 'Bookmark not found', 404);
+    const toDelete = [bm._id.toString()];
+    let frontier = [bm._id];
+    while (frontier.length) {
+      const children = await Bookmark.find({ parentId: { $in: frontier }, ownerId: req.user.id }, { _id: 1 });
+      frontier = children.map(c => c._id);
+      for (const c of children) toDelete.push(c._id.toString());
+    }
+    await Bookmark.deleteMany({ _id: { $in: toDelete }, ownerId: req.user.id });
+    res.status(204).end();
+  } catch (e) { next(e); }
+});

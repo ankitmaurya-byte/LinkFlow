@@ -93,3 +93,25 @@ describe('bookmarks PATCH', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('bookmarks DELETE', () => {
+  it('deletes a link', async () => {
+    const auth = await authedAlice();
+    const link = await auth(request(app).post('/bookmarks').send({ parentId: null, kind: 'link', name: 'L', url: 'https://l.test' }));
+    const res = await auth(request(app).delete(`/bookmarks/${link.body.bookmark.id}`));
+    expect(res.status).toBe(204);
+    const list = await auth(request(app).get('/bookmarks'));
+    expect(list.body.bookmarks).toHaveLength(0);
+  });
+
+  it('cascades folder delete to descendants', async () => {
+    const auth = await authedAlice();
+    const a = await auth(request(app).post('/bookmarks').send({ parentId: null, kind: 'folder', name: 'A' }));
+    const b = await auth(request(app).post('/bookmarks').send({ parentId: a.body.bookmark.id, kind: 'folder', name: 'B' }));
+    await auth(request(app).post('/bookmarks').send({ parentId: b.body.bookmark.id, kind: 'link', name: 'L', url: 'https://l.test' }));
+    const res = await auth(request(app).delete(`/bookmarks/${a.body.bookmark.id}`));
+    expect(res.status).toBe(204);
+    const list = await auth(request(app).get('/bookmarks'));
+    expect(list.body.bookmarks).toHaveLength(0);
+  });
+});
