@@ -69,4 +69,32 @@ describe('friends', () => {
     const accept = await request(app).post(`/friends/${req1.body.friendship.id}/accept`).set('Authorization', `Bearer ${a.accessToken}`);
     expect(accept.status).toBe(403);
   });
+
+  it('either party can delete pending (reject)', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    const req1 = await request(app).post('/friends/request').set('Authorization', `Bearer ${a.accessToken}`).send({ username: 'bob' });
+    const del = await request(app).delete(`/friends/${req1.body.friendship.id}`).set('Authorization', `Bearer ${b.accessToken}`);
+    expect(del.status).toBe(204);
+    const reqs = await request(app).get('/friends/requests').set('Authorization', `Bearer ${a.accessToken}`);
+    expect(reqs.body.outgoing).toHaveLength(0);
+  });
+
+  it('either party can delete accepted (unfriend)', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    const r1 = await request(app).post('/friends/request').set('Authorization', `Bearer ${a.accessToken}`).send({ username: 'bob' });
+    await request(app).post(`/friends/${r1.body.friendship.id}/accept`).set('Authorization', `Bearer ${b.accessToken}`);
+    const del = await request(app).delete(`/friends/${r1.body.friendship.id}`).set('Authorization', `Bearer ${a.accessToken}`);
+    expect(del.status).toBe(204);
+  });
+
+  it('non-party cannot delete', async () => {
+    const a = await signupUser(app, 'alice');
+    await signupUser(app, 'bob');
+    const c = await signupUser(app, 'carol');
+    const r1 = await request(app).post('/friends/request').set('Authorization', `Bearer ${a.accessToken}`).send({ username: 'bob' });
+    const del = await request(app).delete(`/friends/${r1.body.friendship.id}`).set('Authorization', `Bearer ${c.accessToken}`);
+    expect(del.status).toBe(404);
+  });
 });
