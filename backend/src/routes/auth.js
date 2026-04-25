@@ -11,10 +11,16 @@ function publicUser(u) {
   return { id: u._id.toString(), username: u.username, createdAt: u.createdAt };
 }
 
+const USERNAME_RE = /^[a-z0-9_-]+$/;
+
 function validateCreds(body) {
   const { username, password } = body || {};
   if (typeof username !== 'string' || typeof password !== 'string') {
     throw new AppError('VALIDATION', 'username and password required', 400);
+  }
+  const u = username.toLowerCase();
+  if (u.length < 3 || u.length > 32 || !USERNAME_RE.test(u)) {
+    throw new AppError('VALIDATION', 'username must be 3-32 chars of [a-z0-9_-]', 400);
   }
   if (password.length < 8) {
     throw new AppError('VALIDATION', 'password must be at least 8 characters', 400);

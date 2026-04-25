@@ -8,7 +8,6 @@ export default defineConfig({
     hookTimeout: 30000,
     sequence: { concurrent: false },
     pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
-    isolate: false
+    poolOptions: { forks: { singleFork: true } }
   }
 });

@@ -7,4 +7,4 @@ const schema = new mongoose.Schema({
   revokedAt: { type: Date, default: null }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
-export const RefreshToken = mongoose.model('RefreshToken', schema);
+export const RefreshToken = mongoose.models.RefreshToken || mongoose.model('RefreshToken', schema);

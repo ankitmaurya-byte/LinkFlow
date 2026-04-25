@@ -20,12 +20,23 @@ describe('auth', () => {
     await signupUser(app, 'alice');
     const res = await request(app).post('/auth/signup').send({ username: 'alice', password: 'hunter2hunter2' });
     expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('CONFLICT');
   });
 
   it('rejects short password', async () => {
     const res = await request(app).post('/auth/signup').send({ username: 'alice', password: 'short' });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION');
+  });
+
+  it('rejects invalid username (regex/length) with VALIDATION', async () => {
+    const bad1 = await request(app).post('/auth/signup').send({ username: 'Alice!', password: 'hunter2hunter2' });
+    expect(bad1.status).toBe(400);
+    expect(bad1.body.error.code).toBe('VALIDATION');
+
+    const bad2 = await request(app).post('/auth/signup').send({ username: 'ab', password: 'hunter2hunter2' });
+    expect(bad2.status).toBe(400);
+    expect(bad2.body.error.code).toBe('VALIDATION');
   });
 
   it('logs in valid creds', async () => {
