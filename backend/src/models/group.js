@@ -6,4 +6,9 @@ const schema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
+// NOTE: cycle prevention on `parentGroupId` is deferred — Spec A has no
+// group reparent/move endpoint, so cycles can only be planted via direct DB
+// writes. Spec B/C should add a `pre('validate')` hook walking ancestors via
+// `Group.findById(parentGroupId)` when a move endpoint is introduced.
+
 export const Group = mongoose.models.Group || mongoose.model('Group', schema);

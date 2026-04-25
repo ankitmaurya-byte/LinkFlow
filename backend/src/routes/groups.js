@@ -147,6 +147,9 @@ router.get('/:id/members', requireGroupMember('id'), async (req, res, next) => {
 
 router.delete('/:id/members/:userId', requireGroupAdmin('id'), async (req, res, next) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.userId)) {
+      throw new AppError('NOT_FOUND', 'Member not found', 404);
+    }
     if (req.params.userId === req.user.id) {
       const adminCount = await GroupMember.countDocuments({ groupId: req.params.id, role: 'admin' });
       if (adminCount <= 1) {
