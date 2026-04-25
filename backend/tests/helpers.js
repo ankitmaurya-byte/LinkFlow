@@ -20,3 +20,10 @@ export async function resetDb() {
   const collections = await mongoose.connection.db.collections();
   for (const c of collections) await c.deleteMany({});
 }
+
+import request from 'supertest';
+
+export async function signupUser(app, username = 'alice', password = 'hunter2hunter2') {
+  const res = await request(app).post('/auth/signup').send({ username, password });
+  return res.body;
+}

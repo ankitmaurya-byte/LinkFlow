@@ -1,5 +1,6 @@
 import express from 'express';
 import { errorHandler, notFound } from './middleware/error.js';
+import { router as authRouter, meRouter } from './routes/auth.js';
 
 export function createApp() {
   const app = express();
@@ -7,7 +8,8 @@ export function createApp() {
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
-  // routes mounted here in later tasks
+  app.use('/auth', authRouter);
+  app.use(meRouter);
 
   app.use(notFound);
   app.use(errorHandler);
