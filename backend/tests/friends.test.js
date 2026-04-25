@@ -98,3 +98,22 @@ describe('friends', () => {
     expect(del.status).toBe(404);
   });
 });
+
+describe('friend bookmark visibility', () => {
+  it('non-friend gets 403; friend gets tree', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    await request(app).post('/bookmarks').set('Authorization', `Bearer ${a.accessToken}`)
+      .send({ parentId: null, kind: 'folder', name: 'AlicesFolder' });
+
+    const blocked = await request(app).get('/users/alice/bookmarks').set('Authorization', `Bearer ${b.accessToken}`);
+    expect(blocked.status).toBe(403);
+
+    const r1 = await request(app).post('/friends/request').set('Authorization', `Bearer ${a.accessToken}`).send({ username: 'bob' });
+    await request(app).post(`/friends/${r1.body.friendship.id}/accept`).set('Authorization', `Bearer ${b.accessToken}`);
+
+    const ok = await request(app).get('/users/alice/bookmarks').set('Authorization', `Bearer ${b.accessToken}`);
+    expect(ok.status).toBe(200);
+    expect(ok.body.bookmarks[0].name).toBe('AlicesFolder');
+  });
+});

@@ -2,7 +2,8 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { User } from '../models/user.js';
 import { Friendship } from '../models/friendship.js';
-import { requireAuth } from '../middleware/auth.js';
+import { Bookmark } from '../models/bookmark.js';
+import { requireAuth, requireFriendOf } from '../middleware/auth.js';
 import { AppError } from '../middleware/error.js';
 
 export const router = express.Router();
@@ -91,5 +92,25 @@ router.delete('/:id', async (req, res, next) => {
     if (!(f.userA.equals(me) || f.userB.equals(me))) throw new AppError('NOT_FOUND', 'Not found', 404);
     await f.deleteOne();
     res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+export const userBookmarksRouter = express.Router();
+
+userBookmarksRouter.get('/users/:username/bookmarks', requireAuth, requireFriendOf('username'), async (req, res, next) => {
+  try {
+    const target = req.targetUser;
+    const parentIdRaw = req.query.parentId;
+    const parentId = (parentIdRaw && parentIdRaw !== 'null') ? parentIdRaw : null;
+    const list = await Bookmark.find({ ownerId: target._id, parentId }).sort({ createdAt: 1 });
+    res.json({ bookmarks: list.map(b => ({
+      id: b._id.toString(),
+      parentId: b.parentId ? b.parentId.toString() : null,
+      kind: b.kind,
+      name: b.name,
+      url: b.url,
+      platform: b.platform,
+      createdAt: b.createdAt
+    })) });
   } catch (e) { next(e); }
 });
