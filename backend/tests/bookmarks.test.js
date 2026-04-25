@@ -65,3 +65,31 @@ describe('bookmarks GET/POST', () => {
     expect(inside.body.bookmarks).toHaveLength(1);
   });
 });
+
+describe('bookmarks PATCH', () => {
+  it('renames a bookmark', async () => {
+    const auth = await authedAlice();
+    const f = await auth(request(app).post('/bookmarks').send({ parentId: null, kind: 'folder', name: 'A' }));
+    const r = await auth(request(app).patch(`/bookmarks/${f.body.bookmark.id}`).send({ name: 'B' }));
+    expect(r.status).toBe(200);
+    expect(r.body.bookmark.name).toBe('B');
+  });
+
+  it('rejects cycle: cannot reparent ancestor under descendant', async () => {
+    const auth = await authedAlice();
+    const a = await auth(request(app).post('/bookmarks').send({ parentId: null, kind: 'folder', name: 'A' }));
+    const b = await auth(request(app).post('/bookmarks').send({ parentId: a.body.bookmark.id, kind: 'folder', name: 'B' }));
+    const res = await auth(request(app).patch(`/bookmarks/${a.body.bookmark.id}`).send({ parentId: b.body.bookmark.id }));
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION');
+  });
+
+  it('forbids editing other user bookmark', async () => {
+    const aliceAuth = await authedAlice();
+    const af = await aliceAuth(request(app).post('/bookmarks').send({ parentId: null, kind: 'folder', name: 'A' }));
+    const { accessToken: bobToken } = await signupUser(app, 'bob');
+    const res = await request(app).patch(`/bookmarks/${af.body.bookmark.id}`)
+      .set('Authorization', `Bearer ${bobToken}`).send({ name: 'X' });
+    expect(res.status).toBe(404);
+  });
+});

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { Bookmark } from '../models/bookmark.js';
 import { requireAuth } from '../middleware/auth.js';
 import { AppError } from '../middleware/error.js';
+import { wouldCreateCycle } from '../services/tree.js';
 
 export const router = express.Router();
 router.use(requireAuth);
@@ -69,5 +70,38 @@ router.post('/', async (req, res, next) => {
       platform: kind === 'link' ? platform || null : null
     });
     res.json({ bookmark: publicBookmark(created) });
+  } catch (e) { next(e); }
+});
+
+router.patch('/:id', async (req, res, next) => {
+  try {
+    const id = parseObjectId(req.params.id, 'id');
+    const bm = await Bookmark.findOne({ _id: id, ownerId: req.user.id });
+    if (!bm) throw new AppError('NOT_FOUND', 'Bookmark not found', 404);
+
+    if ('parentId' in req.body) {
+      const newParent = parseObjectId(req.body.parentId, 'parentId');
+      await assertParentOwnedFolder(newParent, req.user.id);
+      const ancestors = [];
+      let cursor = newParent;
+      while (cursor) {
+        const parent = await Bookmark.findOne({ _id: cursor, ownerId: req.user.id }, { parentId: 1 });
+        if (!parent) break;
+        ancestors.push(parent);
+        cursor = parent.parentId;
+      }
+      const lookup = (cid) => ancestors.find(n => n._id.toString() === cid?.toString());
+      if (wouldCreateCycle(bm._id, newParent, lookup) || (newParent && newParent.toString() === bm._id.toString())) {
+        throw new AppError('VALIDATION', 'parentId would create cycle', 400);
+      }
+      bm.parentId = newParent;
+    }
+    if (typeof req.body.name === 'string' && req.body.name.trim()) bm.name = req.body.name.trim();
+    if (bm.kind === 'link') {
+      if (typeof req.body.url === 'string') bm.url = req.body.url;
+      if (typeof req.body.platform === 'string') bm.platform = req.body.platform;
+    }
+    await bm.save();
+    res.json({ bookmark: publicBookmark(bm) });
   } catch (e) { next(e); }
 });
