@@ -4,8 +4,10 @@ import { hashPassword, verifyPassword } from '../services/passwords.js';
 import { signAccess, issueRefresh, rotateRefresh, revokeRefresh } from '../services/tokens.js';
 import { AppError } from '../middleware/error.js';
 import { requireAuth } from '../middleware/auth.js';
+import { authRateLimit } from '../middleware/rateLimit.js';
 
 export const router = express.Router();
+router.use(authRateLimit);
 
 function publicUser(u) {
   return { id: u._id.toString(), username: u.username, createdAt: u.createdAt };
