@@ -2,7 +2,9 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { Group } from '../models/group.js';
 import { GroupMember } from '../models/groupMember.js';
-import { requireAuth, requireGroupMember } from '../middleware/auth.js';
+import { JoinRequest } from '../models/joinRequest.js';
+import { User } from '../models/user.js';
+import { requireAuth, requireGroupMember, requireGroupAdmin } from '../middleware/auth.js';
 import { AppError } from '../middleware/error.js';
 
 export const router = express.Router();
@@ -65,5 +67,93 @@ router.get('/:id/children', requireGroupMember('id'), async (req, res, next) => 
   try {
     const list = await Group.find({ parentGroupId: req.params.id }).sort({ createdAt: 1 });
     res.json({ groups: list.map(publicGroup) });
+  } catch (e) { next(e); }
+});
+
+router.post('/:id/join', async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('NOT_FOUND', 'Not found', 404);
+    const g = await Group.findById(req.params.id);
+    if (!g) throw new AppError('NOT_FOUND', 'Not found', 404);
+
+    const existingMember = await GroupMember.findOne({ groupId: g._id, userId: req.user.id });
+    if (existingMember) throw new AppError('CONFLICT', 'Already a member', 409);
+    const existingPending = await JoinRequest.findOne({ groupId: g._id, userId: req.user.id, status: 'pending' });
+    if (existingPending) throw new AppError('CONFLICT', 'Request already pending', 409);
+
+    const jr = await JoinRequest.create({ groupId: g._id, userId: req.user.id, status: 'pending' });
+    res.json({ request: { id: jr._id.toString(), status: jr.status } });
+  } catch (e) { next(e); }
+});
+
+router.get('/:id/requests', requireGroupAdmin('id'), async (req, res, next) => {
+  try {
+    const list = await JoinRequest.find({ groupId: req.params.id, status: 'pending' });
+    const userIds = list.map(r => r.userId);
+    const users = await User.find({ _id: { $in: userIds } }, { username: 1 });
+    const byId = new Map(users.map(u => [u._id.toString(), u.username]));
+    res.json({
+      requests: list.map(r => ({
+        id: r._id.toString(),
+        userId: r.userId.toString(),
+        username: byId.get(r.userId.toString()),
+        createdAt: r.createdAt
+      }))
+    });
+  } catch (e) { next(e); }
+});
+
+router.post('/:id/requests/:reqId/approve', requireGroupAdmin('id'), async (req, res, next) => {
+  try {
+    const jr = await JoinRequest.findOne({ _id: req.params.reqId, groupId: req.params.id, status: 'pending' });
+    if (!jr) throw new AppError('NOT_FOUND', 'Not found', 404);
+    jr.status = 'approved';
+    await jr.save();
+    await GroupMember.updateOne(
+      { groupId: jr.groupId, userId: jr.userId },
+      { $setOnInsert: { groupId: jr.groupId, userId: jr.userId, role: 'member' } },
+      { upsert: true }
+    );
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+router.delete('/:id/requests/:reqId', requireGroupAdmin('id'), async (req, res, next) => {
+  try {
+    const jr = await JoinRequest.findOne({ _id: req.params.reqId, groupId: req.params.id, status: 'pending' });
+    if (!jr) throw new AppError('NOT_FOUND', 'Not found', 404);
+    jr.status = 'rejected';
+    await jr.save();
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+router.get('/:id/members', requireGroupMember('id'), async (req, res, next) => {
+  try {
+    const ms = await GroupMember.find({ groupId: req.params.id });
+    const users = await User.find({ _id: { $in: ms.map(m => m.userId) } }, { username: 1 });
+    const byId = new Map(users.map(u => [u._id.toString(), u.username]));
+    res.json({
+      members: ms.map(m => ({
+        userId: m.userId.toString(),
+        username: byId.get(m.userId.toString()),
+        role: m.role,
+        joinedAt: m.joinedAt
+      }))
+    });
+  } catch (e) { next(e); }
+});
+
+router.delete('/:id/members/:userId', requireGroupAdmin('id'), async (req, res, next) => {
+  try {
+    if (req.params.userId === req.user.id) {
+      const adminCount = await GroupMember.countDocuments({ groupId: req.params.id, role: 'admin' });
+      if (adminCount <= 1) {
+        throw new AppError('VALIDATION', 'sole admin cannot leave', 400);
+      }
+    }
+    const r = await GroupMember.deleteOne({ groupId: req.params.id, userId: req.params.userId });
+    if (r.deletedCount === 0) throw new AppError('NOT_FOUND', 'Member not found', 404);
+    res.status(204).end();
   } catch (e) { next(e); }
 });

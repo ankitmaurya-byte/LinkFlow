@@ -56,3 +56,64 @@ describe('groups create + list', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('groups membership', () => {
+  it('user joins via approve-flow', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    const g = await request(app).post('/groups').set('Authorization', `Bearer ${a.accessToken}`).send({ name: 'G' });
+    const join = await request(app).post(`/groups/${g.body.group.id}/join`).set('Authorization', `Bearer ${b.accessToken}`);
+    expect(join.status).toBe(200);
+
+    const reqs = await request(app).get(`/groups/${g.body.group.id}/requests`).set('Authorization', `Bearer ${a.accessToken}`);
+    expect(reqs.body.requests).toHaveLength(1);
+
+    const reqId = reqs.body.requests[0].id;
+    const ok = await request(app).post(`/groups/${g.body.group.id}/requests/${reqId}/approve`).set('Authorization', `Bearer ${a.accessToken}`);
+    expect(ok.status).toBe(200);
+
+    const members = await request(app).get(`/groups/${g.body.group.id}/members`).set('Authorization', `Bearer ${a.accessToken}`);
+    expect(members.body.members.map(m => m.username).sort()).toEqual(['alice', 'bob']);
+  });
+
+  it('non-admin cannot list requests or approve', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    const g = await request(app).post('/groups').set('Authorization', `Bearer ${a.accessToken}`).send({ name: 'G' });
+    await request(app).post(`/groups/${g.body.group.id}/join`).set('Authorization', `Bearer ${b.accessToken}`);
+    const reqs = await request(app).get(`/groups/${g.body.group.id}/requests`).set('Authorization', `Bearer ${b.accessToken}`);
+    expect(reqs.status).toBe(403);
+  });
+
+  it('rejects duplicate join while pending or member', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    const g = await request(app).post('/groups').set('Authorization', `Bearer ${a.accessToken}`).send({ name: 'G' });
+    await request(app).post(`/groups/${g.body.group.id}/join`).set('Authorization', `Bearer ${b.accessToken}`);
+    const dup = await request(app).post(`/groups/${g.body.group.id}/join`).set('Authorization', `Bearer ${b.accessToken}`);
+    expect(dup.status).toBe(409);
+  });
+
+  it('admin rejects request', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    const g = await request(app).post('/groups').set('Authorization', `Bearer ${a.accessToken}`).send({ name: 'G' });
+    await request(app).post(`/groups/${g.body.group.id}/join`).set('Authorization', `Bearer ${b.accessToken}`);
+    const reqs = await request(app).get(`/groups/${g.body.group.id}/requests`).set('Authorization', `Bearer ${a.accessToken}`);
+    const del = await request(app).delete(`/groups/${g.body.group.id}/requests/${reqs.body.requests[0].id}`).set('Authorization', `Bearer ${a.accessToken}`);
+    expect(del.status).toBe(204);
+  });
+
+  it('admin kicks member; sole admin cannot kick self', async () => {
+    const a = await signupUser(app, 'alice');
+    const b = await signupUser(app, 'bob');
+    const g = await request(app).post('/groups').set('Authorization', `Bearer ${a.accessToken}`).send({ name: 'G' });
+    await request(app).post(`/groups/${g.body.group.id}/join`).set('Authorization', `Bearer ${b.accessToken}`);
+    const reqs = await request(app).get(`/groups/${g.body.group.id}/requests`).set('Authorization', `Bearer ${a.accessToken}`);
+    await request(app).post(`/groups/${g.body.group.id}/requests/${reqs.body.requests[0].id}/approve`).set('Authorization', `Bearer ${a.accessToken}`);
+    const kick = await request(app).delete(`/groups/${g.body.group.id}/members/${b.user.id}`).set('Authorization', `Bearer ${a.accessToken}`);
+    expect(kick.status).toBe(204);
+    const selfKick = await request(app).delete(`/groups/${g.body.group.id}/members/${a.user.id}`).set('Authorization', `Bearer ${a.accessToken}`);
+    expect(selfKick.status).toBe(400);
+  });
+});
