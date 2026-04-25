@@ -21,4 +21,14 @@ describe('User model', () => {
     await expect(User.create({ username: 'ab', passwordHash: 'x' })).rejects.toThrow();
     await expect(User.create({ username: 'has space', passwordHash: 'x' })).rejects.toThrow();
   });
+
+  it('passwordHash is absent from default findOne result (select: false)', async () => {
+    await User.create({ username: 'eve', passwordHash: 'secret-hash-1' });
+    const found = await User.findOne({ username: 'eve' });
+    expect(found.username).toBe('eve');
+    expect(found.passwordHash).toBeUndefined();
+
+    const explicit = await User.findOne({ username: 'eve' }).select('+passwordHash');
+    expect(explicit.passwordHash).toBe('secret-hash-1');
+  });
 });

@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     maxlength: 32,
     match: /^[a-z0-9_-]+$/
   },
-  passwordHash: { type: String, required: true }
+  passwordHash: { type: String, required: true, select: false }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 export const User = mongoose.model('User', userSchema);
