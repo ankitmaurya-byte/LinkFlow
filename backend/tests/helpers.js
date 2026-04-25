@@ -16,6 +16,7 @@ export async function stopTestApp() {
 }
 
 export async function resetDb() {
+  await Promise.all(Object.values(mongoose.models).map(m => m.syncIndexes()));
   const collections = await mongoose.connection.db.collections();
   for (const c of collections) await c.deleteMany({});
 }
