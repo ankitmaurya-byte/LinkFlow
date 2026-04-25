@@ -4,6 +4,7 @@ import { Group } from '../models/group.js';
 import { GroupMember } from '../models/groupMember.js';
 import { JoinRequest } from '../models/joinRequest.js';
 import { User } from '../models/user.js';
+import { GroupFolder } from '../models/groupFolder.js';
 import { requireAuth, requireGroupMember, requireGroupAdmin } from '../middleware/auth.js';
 import { AppError } from '../middleware/error.js';
 
@@ -154,6 +155,64 @@ router.delete('/:id/members/:userId', requireGroupAdmin('id'), async (req, res, 
     }
     const r = await GroupMember.deleteOne({ groupId: req.params.id, userId: req.params.userId });
     if (r.deletedCount === 0) throw new AppError('NOT_FOUND', 'Member not found', 404);
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+function publicFolder(f) {
+  return {
+    id: f._id.toString(),
+    groupId: f.groupId.toString(),
+    parentFolderId: f.parentFolderId ? f.parentFolderId.toString() : null,
+    name: f.name,
+    createdAt: f.createdAt
+  };
+}
+
+router.get('/:id/folders', requireGroupMember('id'), async (req, res, next) => {
+  try {
+    const parentFolderId = (req.query.parentFolderId && req.query.parentFolderId !== 'null')
+      ? req.query.parentFolderId : null;
+    const folders = await GroupFolder.find({ groupId: req.params.id, parentFolderId }).sort({ createdAt: 1 });
+    res.json({ folders: folders.map(publicFolder) });
+  } catch (e) { next(e); }
+});
+
+router.post('/:id/folders', requireGroupAdmin('id'), async (req, res, next) => {
+  try {
+    const { name, parentFolderId } = req.body || {};
+    if (typeof name !== 'string' || !name.trim()) {
+      throw new AppError('VALIDATION', 'name required', 400);
+    }
+    let parent = null;
+    if (parentFolderId) {
+      if (!mongoose.isValidObjectId(parentFolderId)) {
+        throw new AppError('VALIDATION', 'invalid parentFolderId', 400);
+      }
+      parent = await GroupFolder.findOne({ _id: parentFolderId, groupId: req.params.id });
+      if (!parent) throw new AppError('VALIDATION', 'parent folder not in group', 400);
+    }
+    const created = await GroupFolder.create({
+      groupId: req.params.id,
+      parentFolderId: parent ? parent._id : null,
+      name: name.trim()
+    });
+    res.json({ folder: publicFolder(created) });
+  } catch (e) { next(e); }
+});
+
+router.delete('/:id/folders/:fid', requireGroupAdmin('id'), async (req, res, next) => {
+  try {
+    const root = await GroupFolder.findOne({ _id: req.params.fid, groupId: req.params.id });
+    if (!root) throw new AppError('NOT_FOUND', 'Not found', 404);
+    const toDelete = [root._id];
+    let frontier = [root._id];
+    while (frontier.length) {
+      const children = await GroupFolder.find({ parentFolderId: { $in: frontier }, groupId: req.params.id }, { _id: 1 });
+      frontier = children.map(c => c._id);
+      for (const c of children) toDelete.push(c._id);
+    }
+    await GroupFolder.deleteMany({ _id: { $in: toDelete }, groupId: req.params.id });
     res.status(204).end();
   } catch (e) { next(e); }
 });
