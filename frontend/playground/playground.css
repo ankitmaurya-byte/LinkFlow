@@ -53,6 +53,33 @@ body {
   line-height: 1.6;
 }
 
+/* Embed mode (inside popup iframe) */
+body.embed-mode .header {
+  padding: var(--space-sm) var(--space-md);
+}
+body.embed-mode .app-title {
+  font-size: 14px;
+}
+body.embed-mode .sidebar {
+  width: 140px;
+  padding: var(--space-sm);
+}
+body.embed-mode .nav-item {
+  padding: var(--space-sm);
+  font-size: 12px;
+  gap: var(--space-sm);
+}
+body.embed-mode .content-area {
+  padding: var(--space-md);
+  max-width: none;
+}
+body.embed-mode .view-header h2 {
+  font-size: 16px;
+}
+body.embed-mode .view-description {
+  font-size: 12px;
+}
+
 .playground-container {
   min-height: 100vh;
   display: flex;

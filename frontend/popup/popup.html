@@ -10,91 +10,33 @@
 <body>
   <!-- Header -->
   <header class="header">
-    <div class="header-left">
-      <div class="app-icon">⬡</div>
-      <h1 class="app-title">LinkFlow</h1>
-    </div>
-    <div class="header-right">
-      <button class="logout-btn" id="logoutBtn" title="Log out" hidden>Log out</button>
-      <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">
+    <div class="settings-corner">
+      <button class="settings-square" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
         <span>⚙️</span>
       </button>
+      <div class="settings-menu" id="settingsMenu" hidden>
+        <button class="dropdown-item" id="profileBtn">👤 Profile</button>
+        <button class="dropdown-item" id="openDashboardBtn">📊 Open Dashboard</button>
+        <button class="dropdown-item" id="playgroundBtn">🔬 Open Playground</button>
+        <button class="dropdown-item danger" id="logoutBtn">🚪 Log out</button>
+      </div>
     </div>
   </header>
-  <style>
-    .header-right { display: flex; align-items: center; gap: 8px; }
-  </style>
-
-  <!-- Primary Action -->
-  <div class="primary-action">
-    <button class="btn btn-primary" id="saveCurrentTabBtn">
-      <span class="btn-icon">+</span>
-      Save Current Tab
-    </button>
-  </div>
-
-  <!-- Secondary Actions -->
-  <div class="secondary-actions">
-    <button class="btn btn-secondary" id="pasteUrlBtn">
-      <span class="btn-icon">📋</span>
-      Paste URL
-    </button>
-    <button class="btn btn-secondary" id="newFolderBtn">
-      <span class="btn-icon">📁</span>
-      New Folder
-    </button>
-  </div>
-
-  <!-- Tabs Navigation -->
-  <nav class="tabs-nav" id="tabsNav">
-    <button class="tab-btn active" data-tab="all-links">All Links</button>
-    <button class="tab-btn" data-tab="work">
-      Work
-      <span class="tab-badge" data-count="0">0</span>
-    </button>
-    <button class="tab-btn" data-tab="personal">
-      Personal
-      <span class="tab-badge" data-count="0">0</span>
-    </button>
-    <button class="tab-btn" data-tab="inspiration">
-      Inspiration
-      <span class="tab-badge" data-count="0">0</span>
-    </button>
-  </nav>
-
-  <!-- Breadcrumbs -->
-  <div class="breadcrumbs" id="breadcrumbs" style="display: none;">
-    <!-- Dynamically populated -->
-  </div>
 
   <!-- Search -->
   <div class="search-container">
-    <input 
-      type="text" 
-      class="search-input" 
-      id="searchInput" 
+    <input
+      type="text"
+      class="search-input"
+      id="searchInput"
       placeholder="🔍 Search your links..."
     />
   </div>
 
-  <!-- Content Area -->
+  <!-- Tree Content Area -->
   <div class="content" id="content">
-    <!-- Folder Actions (shown when inside folder) -->
-    <div class="folder-actions" id="folderActions" style="display: none;">
-      <button class="btn btn-sm btn-outline" id="addLinkInFolderBtn">
-        <span>+</span> Add Link
-      </button>
-      <button class="btn btn-sm btn-outline" id="addSubFolderBtn">
-        <span>📁</span> Add Sub-folder
-      </button>
-      <button class="btn btn-sm btn-danger-outline" id="deleteFolderBtn">
-        <span>🗑️</span> Delete Folder
-      </button>
-    </div>
-
-    <!-- Links and Folders Container -->
-    <div class="items-container" id="itemsContainer">
-      <!-- Dynamically populated with folders and links -->
+    <div class="tree-container" id="itemsContainer">
+      <!-- Dynamically populated tree -->
     </div>
 
     <!-- Empty State -->
@@ -104,27 +46,19 @@
       <p class="empty-subtext">Save your first link to get started</p>
     </div>
 
-    <!-- Playground Link -->
-    <div class="playground-link-container">
-      <button class="btn btn-playground" id="playgroundBtn">
-        🔬 Open Playground
-      </button>
-    </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-left">
-      <span class="status-indicator">●</span>
-      <span class="status-text">All changes saved</span>
+  <!-- Playground Overlay (embedded) -->
+  <div class="playground-overlay" id="playgroundOverlay" hidden>
+    <div class="playground-overlay-header">
+      <span class="playground-overlay-title">🔬 Playground</span>
+      <button class="icon-btn" id="closePlaygroundBtn" title="Close">×</button>
     </div>
-    <button class="footer-link" id="openDashboardBtn">
-      Open Dashboard →
-    </button>
-  </footer>
+    <iframe class="playground-frame" id="playgroundFrame" title="Playground"></iframe>
+  </div>
 
   <!-- Modals -->
-  
+
   <!-- Paste URL Modal -->
   <div class="modal" id="pasteUrlModal">
     <div class="modal-content">
@@ -224,6 +158,25 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" data-modal="confirmDeleteModal">Cancel</button>
         <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal" id="profileModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Profile</h3>
+        <button class="modal-close" data-modal="profileModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Email</label>
+          <div id="profileEmail" class="profile-field">—</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="profileModal">Close</button>
       </div>
     </div>
   </div>

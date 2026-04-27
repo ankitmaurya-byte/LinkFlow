@@ -8,7 +8,17 @@ class PlaygroundController {
   }
 
   init() {
+    this.applyEmbedMode();
     this.bindEvents();
+  }
+
+  applyEmbedMode() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('embed') === '1') {
+      document.body.classList.add('embed-mode');
+      const back = document.getElementById('backToPopupBtn');
+      if (back) back.hidden = true;
+    }
   }
 
   bindEvents() {

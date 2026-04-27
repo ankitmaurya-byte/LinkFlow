@@ -2,12 +2,11 @@
 
 class PopupController {
   constructor() {
-    this.currentTab = 'all-links';
+    this.currentTab = 'work';
     this.currentFolder = null;
     this.searchQuery = '';
-    this.breadcrumbsManager = new Breadcrumbs('breadcrumbs');
+    this.expanded = new Set();
 
-    // State for context actions
     this.tempRenameContext = null;
     this.tempDeleteContext = null;
     this.tempMoveContext = null;
@@ -23,47 +22,38 @@ class PopupController {
 
   async loadCurrentView() {
     const view = await storage.getCurrentView();
-    this.currentTab = view.tabId || 'all-links';
+    this.currentTab = (view.tabId && view.tabId !== 'all-links') ? view.tabId : 'work';
     this.currentFolder = view.folderId || null;
+    this.expanded.add(`tab:${this.currentTab}`);
+    this.path = [{ tabId: this.currentTab, folderId: null }];
   }
 
   async saveCurrentView() {
     await storage.setCurrentView({
       tabId: this.currentTab,
       folderId: this.currentFolder,
-      breadcrumbs: await this.getBreadcrumbs()
+      breadcrumbs: []
     });
   }
 
+  toggleExpand(key) {
+    if (this.expanded.has(key)) this.expanded.delete(key);
+    else this.expanded.add(key);
+  }
+
+  // Column-view path: array of { tabId, folderId } where each entry produces a column showing children
+  // path = [] → only root tab column shown
+  // path = [{tabId,null}] → tab roots column
+  // path = [{tabId,null},{tabId,folderId}] → that folder's column
+  ensurePath() { if (!this.path) this.path = []; }
+
   bindEvents() {
-    // Tab navigation
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.switchTab(btn.dataset.tab);
-      });
-    });
-
-    // Save current tab button
-    document.getElementById('saveCurrentTabBtn').addEventListener('click', () => {
-      this.saveCurrentTab();
-    });
-
-    // Paste URL button
-    document.getElementById('pasteUrlBtn').addEventListener('click', () => {
-      modalManager.open('pasteUrlModal');
-    });
-
-    // Save custom link
+    // Save custom link (modal action)
     document.getElementById('saveCustomLinkBtn').addEventListener('click', () => {
       this.saveCustomLink();
     });
 
-    // New folder button
-    document.getElementById('newFolderBtn').addEventListener('click', () => {
-      modalManager.open('newFolderModal');
-    });
-
-    // Create folder
+    // Create folder (modal action)
     document.getElementById('createFolderBtn').addEventListener('click', () => {
       this.createFolder();
     });
@@ -74,33 +64,49 @@ class PopupController {
       this.render();
     });
 
-    // Settings button
-    document.getElementById('settingsBtn').addEventListener('click', () => {
-      // Future: open settings
-      alert('Settings coming soon!');
+    // Settings button — toggle dropdown
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsMenu = document.getElementById('settingsMenu');
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !settingsMenu.hidden;
+      settingsMenu.hidden = isOpen;
+      settingsBtn.setAttribute('aria-expanded', String(!isOpen));
+    });
+    document.addEventListener('click', (e) => {
+      if (!settingsMenu.hidden &&
+          !settingsMenu.contains(e.target) &&
+          e.target !== settingsBtn) {
+        settingsMenu.hidden = true;
+        settingsBtn.setAttribute('aria-expanded', 'false');
+      }
     });
 
-    // Open dashboard
+    document.getElementById('profileBtn').addEventListener('click', async () => {
+      settingsMenu.hidden = true;
+      settingsBtn.setAttribute('aria-expanded', 'false');
+      const user = await auth.getCurrentUser();
+      document.getElementById('profileEmail').textContent =
+        user?.email || user?.username || 'Unknown';
+      modalManager.open('profileModal');
+    });
+
+    // Open dashboard (from settings menu)
     document.getElementById('openDashboardBtn').addEventListener('click', () => {
+      settingsMenu.hidden = true;
+      settingsBtn.setAttribute('aria-expanded', 'false');
       browser.runtime.sendMessage({ type: 'OPEN_DASHBOARD' });
     });
 
-    // Open playground
+    // Open playground (embedded inside popup) — from settings menu
     document.getElementById('playgroundBtn').addEventListener('click', () => {
-      browser.runtime.sendMessage({ type: 'OPEN_PLAYGROUND' });
+      settingsMenu.hidden = true;
+      settingsBtn.setAttribute('aria-expanded', 'false');
+      this.openPlaygroundEmbedded();
     });
 
-    // Folder actions (inside folder)
-    document.getElementById('addLinkInFolderBtn')?.addEventListener('click', () => {
-      modalManager.open('pasteUrlModal');
-    });
-
-    document.getElementById('addSubFolderBtn')?.addEventListener('click', () => {
-      modalManager.open('newFolderModal');
-    });
-
-    document.getElementById('deleteFolderBtn')?.addEventListener('click', () => {
-      this.deleteCurrentFolder();
+    document.getElementById('closePlaygroundBtn').addEventListener('click', () => {
+      this.closePlaygroundEmbedded();
     });
 
     // Rename modal save
@@ -132,193 +138,239 @@ class PopupController {
     });
   }
 
-  async switchTab(tabId) {
-    this.currentTab = tabId;
-    this.currentFolder = null;
-    this.searchQuery = '';
-    document.getElementById('searchInput').value = '';
-
-    // Update active state
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tabId);
-    });
-
-    await this.saveCurrentView();
-    await this.render();
-  }
-
-  async navigateToFolder(folderId) {
-    this.currentFolder = folderId;
-    await this.saveCurrentView();
-    await this.render();
-  }
-
-  async navigateUp(tabId, folderId) {
-    this.currentTab = tabId;
-    this.currentFolder = folderId;
-    await this.saveCurrentView();
-    await this.render();
-  }
-
-  async getBreadcrumbs() {
-    if (!this.currentFolder) return [];
-
-    const breadcrumbs = [];
-    const tabs = await storage.getTabs();
-    const currentTabObj = tabs.find(t => t.id === this.currentTab);
-
-    if (currentTabObj) {
-      breadcrumbs.push({
-        name: currentTabObj.name,
-        tabId: this.currentTab,
-        folderId: null
-      });
-    }
-
-    // Build folder path
-    const folders = await storage.getFolders(this.currentTab);
-    let folderId = this.currentFolder;
-    const folderPath = [];
-
-    while (folderId) {
-      const folder = folders.find(f => f.id === folderId);
-      if (folder) {
-        folderPath.unshift(folder);
-        folderId = folder.parentId;
-      } else {
-        break;
-      }
-    }
-
-    folderPath.forEach(folder => {
-      breadcrumbs.push({
-        name: folder.name,
-        tabId: this.currentTab,
-        folderId: folder.id
-      });
-    });
-
-    return breadcrumbs;
+  matchesSearch(name) {
+    if (!this.searchQuery) return true;
+    return name.toLowerCase().includes(this.searchQuery.toLowerCase());
   }
 
   async render() {
+    this.ensurePath();
     const container = document.getElementById('itemsContainer');
     const emptyState = document.getElementById('emptyState');
-    const folderActions = document.getElementById('folderActions');
-
     container.innerHTML = '';
 
-    // Update breadcrumbs
-    const breadcrumbs = await this.getBreadcrumbs();
-    this.breadcrumbsManager.render(breadcrumbs, (tabId, folderId) => {
-      this.navigateUp(tabId, folderId);
-    });
-
-    // Show/hide folder actions
-    if (this.currentFolder) {
-      folderActions.style.display = 'flex';
-    } else {
-      folderActions.style.display = 'none';
-    }
-
-    // Get folders and links
-    let folders;
-    let links;
-    if (this.currentTab === 'all-links' && this.currentFolder === null) {
-      folders = [];
-      const allTabs = await storage.getTabs();
-      links = [];
-      for (const t of allTabs) {
-        if (t.id === 'all-links') continue;
-        const tabLinks = await storage.getAllLinks(t.id);
-        links.push(...tabLinks);
-      }
-    } else {
-      folders = await storage.getFolders(this.currentTab);
-      links = await storage.getLinks(this.currentTab, this.currentFolder);
-      folders = folders.filter(f => f.parentId === this.currentFolder);
-    }
-
-    // Apply search filter
-    if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
-      folders = folders.filter(f => f.name.toLowerCase().includes(query));
-      links = links.filter(l =>
-        l.title.toLowerCase().includes(query) ||
-        l.url.toLowerCase().includes(query)
-      );
-    }
-
-    // Render folders
-    const allTabLinks = await storage.getAllLinks(this.currentTab);
-    const allTabFolders = await storage.getFolders(this.currentTab);
-    for (const folder of folders) {
-      const linkCount = allTabLinks.filter(l => l.folderId === folder.id).length;
-      const subCount = allTabFolders.filter(f => f.parentId === folder.id).length;
-      const itemCount = linkCount + subCount;
-
-      const folderCard = createFolderCard(folder, itemCount, () => {
-        this.navigateToFolder(folder.id);
-      });
-      container.appendChild(folderCard);
-    }
-
-    // Render links
-    for (const link of links) {
-      const linkCard = createLinkCard(link, {
-        onOpen: (link) => {
-          browser.tabs.create({ url: link.url });
-        },
-        onRename: (link) => {
-          this.showRenameModal(link);
-        },
-        onMove: (link) => {
-          this.showMoveModal(link);
-        },
-        onDelete: (link) => {
-          this.showDeleteModal(link, 'link');
+    // Column 0: tabs (root folders)
+    const tabs = (await storage.getTabs()).filter(t => t.id !== 'all-links');
+    const col0 = document.createElement('div');
+    col0.className = 'tree-column';
+    for (const tab of tabs) {
+      const selected = this.path[0]?.tabId === tab.id;
+      col0.appendChild(this.makeColRow({
+        label: tab.name,
+        icon: '📁',
+        isFolder: true,
+        selected,
+        hasChildren: true,
+        onClick: () => {
+          this.path = [{ tabId: tab.id, folderId: null }];
+          this.currentTab = tab.id;
+          this.currentFolder = null;
+          this.saveCurrentView();
+          this.render();
         }
-      });
-      container.appendChild(linkCard);
+      }));
+    }
+    container.appendChild(col0);
+
+    // Subsequent columns from path
+    for (let i = 0; i < this.path.length; i++) {
+      const node = this.path[i];
+      const col = document.createElement('div');
+      col.className = 'tree-column';
+
+      col.appendChild(this.makeActionRow(node.tabId, node.folderId));
+
+      const allFolders = await storage.getFolders(node.tabId);
+      const folders = allFolders.filter(f => f.parentId === node.folderId);
+      const links = await storage.getLinks(node.tabId, node.folderId);
+
+      const renderedFolders = folders.filter(f => this.matchesSearch(f.name));
+      const renderedLinks = links.filter(l => this.matchesSearch(l.title) || this.matchesSearch(l.url));
+
+      for (const f of renderedFolders) {
+        const next = this.path[i + 1];
+        const sel = next && next.folderId === f.id && next.tabId === node.tabId;
+        const hasKids = allFolders.some(x => x.parentId === f.id) ||
+          (await storage.getLinks(node.tabId, f.id)).length > 0;
+        col.appendChild(this.makeColRow({
+          label: f.name,
+          icon: '📁',
+          isFolder: true,
+          selected: sel,
+          hasChildren: hasKids,
+          contextItem: { type: 'folder', tabId: node.tabId, folder: f },
+          onClick: () => {
+            this.path = this.path.slice(0, i + 1).concat([{ tabId: node.tabId, folderId: f.id }]);
+            this.currentTab = node.tabId;
+            this.currentFolder = f.id;
+            this.saveCurrentView();
+            this.render();
+          }
+        }));
+      }
+      for (const l of renderedLinks) {
+        col.appendChild(this.makeColRow({
+          label: l.title,
+          icon: PlatformDetector.getIcon(l.platform),
+          isFolder: false,
+          contextItem: { type: 'link', tabId: node.tabId, link: l },
+          onClick: () => browser.tabs.create({ url: l.url })
+        }));
+      }
+
+      if (renderedFolders.length === 0 && renderedLinks.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'col-empty';
+        empty.textContent = 'Empty';
+        col.appendChild(empty);
+      }
+
+      container.appendChild(col);
     }
 
-    // Show empty state if no items
-    if (folders.length === 0 && links.length === 0) {
+    if (tabs.length === 0) {
       emptyState.style.display = 'block';
-      if (this.searchQuery) {
-        emptyState.querySelector('.empty-text').textContent = 'No results found';
-        emptyState.querySelector('.empty-subtext').textContent = 'Try a different search term';
-      } else {
-        emptyState.querySelector('.empty-text').textContent = 'No links yet';
-        emptyState.querySelector('.empty-subtext').textContent = 'Save your first link to get started';
-      }
+      emptyState.querySelector('.empty-text').textContent = 'No tabs';
+      emptyState.querySelector('.empty-subtext').textContent = '';
     } else {
       emptyState.style.display = 'none';
     }
 
-    // Update tab counts
+    // Auto-scroll to right so newest column is visible
+    container.scrollLeft = container.scrollWidth;
+
     await this.updateTabCounts();
   }
 
-  async updateTabCounts() {
-    const tabs = await storage.getTabs();
-    let total = 0;
+  makeActionRow(tabId, folderId) {
+    const row = document.createElement('div');
+    row.className = 'col-action-row';
+    const actions = [
+      { icon: '💾', label: 'Save Current Tab', run: () => this.saveCurrentInto(tabId, folderId) },
+      { icon: '🔗', label: 'Paste URL', run: () => this.openPasteAt(tabId, folderId) },
+      { icon: '📁', label: 'New Folder', run: () => this.openNewFolderAt(tabId, folderId) },
+    ];
+    for (const a of actions) {
+      const btn = document.createElement('button');
+      btn.className = 'col-action';
+      btn.title = a.label;
+      const ic = document.createElement('span');
+      ic.className = 'col-action-icon';
+      ic.textContent = a.icon;
+      const lbl = document.createElement('span');
+      lbl.className = 'col-action-label';
+      lbl.textContent = a.label;
+      btn.append(ic, lbl);
+      btn.addEventListener('click', (e) => { e.stopPropagation(); a.run(); });
+      row.appendChild(btn);
+    }
+    return row;
+  }
 
-    for (const tab of tabs) {
-      if (tab.id === 'all-links') continue;
-      const links = await storage.getAllLinks(tab.id);
-      total += links.length;
-      const badge = document.querySelector(`[data-tab="${tab.id}"] .tab-badge`);
-      if (badge) {
-        badge.textContent = links.length;
-        badge.dataset.count = links.length;
-      }
+  saveCurrentInto(tabId, folderId) {
+    this.currentTab = tabId;
+    this.currentFolder = folderId;
+    this.saveCurrentTab();
+  }
+
+  openPasteAt(tabId, folderId) {
+    this.currentTab = tabId;
+    this.currentFolder = folderId;
+    modalManager.open('pasteUrlModal');
+  }
+
+  openNewFolderAt(tabId, folderId) {
+    this.currentTab = tabId;
+    this.currentFolder = folderId;
+    modalManager.open('newFolderModal');
+  }
+
+  makeColRow({ label, icon, isFolder, selected, hasChildren, onClick, contextItem }) {
+    const row = document.createElement('div');
+    row.className = 'col-row' + (selected ? ' selected' : '') + (isFolder ? ' is-folder' : ' is-link');
+
+    const ic = document.createElement('span');
+    ic.className = 'col-icon';
+    ic.textContent = icon;
+    row.appendChild(ic);
+
+    const lbl = document.createElement('span');
+    lbl.className = 'col-label';
+    lbl.textContent = label;
+    row.appendChild(lbl);
+
+    if (isFolder && hasChildren) {
+      const arrow = document.createElement('span');
+      arrow.className = 'col-arrow';
+      arrow.textContent = '›';
+      row.appendChild(arrow);
     }
-    const allBadge = document.querySelector('[data-tab="all-links"] .tab-badge');
-    if (allBadge) {
-      allBadge.textContent = total;
-      allBadge.dataset.count = total;
+
+    if (contextItem) {
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'tree-menu-btn';
+      menuBtn.textContent = '⋮';
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.showTreeContextMenu(menuBtn, contextItem);
+      });
+      row.appendChild(menuBtn);
     }
+
+    row.addEventListener('click', () => {
+      if (onClick) onClick();
+    });
+    return row;
+  }
+
+  showTreeContextMenu(button, ctx) {
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'dropdown-menu';
+    if (ctx.type === 'link') {
+      menu.innerHTML = `
+        <button class="dropdown-item" data-action="rename">✏️ Rename</button>
+        <button class="dropdown-item" data-action="move">📁 Move to...</button>
+        <button class="dropdown-item danger" data-action="delete">🗑️ Delete</button>
+      `;
+    } else {
+      menu.innerHTML = `
+        <button class="dropdown-item" data-action="rename">✏️ Rename</button>
+        <button class="dropdown-item danger" data-action="delete">🗑️ Delete</button>
+      `;
+    }
+    document.body.appendChild(menu);
+    const rect = button.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = `${rect.bottom + 4}px`;
+    menu.style.left = `${rect.left - 120}px`;
+    menu.style.zIndex = '2000';
+
+    menu.addEventListener('click', (e) => e.stopPropagation());
+    menu.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const action = item.dataset.action;
+        const target = ctx.type === 'link' ? ctx.link : ctx.folder;
+        this.currentTab = ctx.tabId;
+        if (action === 'rename') this.showRenameModal(target);
+        else if (action === 'move' && ctx.type === 'link') this.showMoveModal(target);
+        else if (action === 'delete') this.showDeleteModal(target, ctx.type);
+        menu.remove();
+      });
+    });
+    setTimeout(() => {
+      const close = (e) => {
+        if (!menu.contains(e.target) && e.target !== button) {
+          menu.remove();
+          document.removeEventListener('click', close);
+        }
+      };
+      document.addEventListener('click', close);
+    }, 0);
+  }
+
+  async updateTabCounts() {
+    /* tabs no longer rendered as badges; tree shows everything */
   }
 
   async saveCurrentTab() {
@@ -342,21 +394,6 @@ class PopupController {
       });
 
       await this.render();
-
-      // Visual feedback
-      const btn = document.getElementById('saveCurrentTabBtn');
-      const originalNodes = Array.from(btn.childNodes);
-      btn.replaceChildren();
-      const icon = document.createElement('span');
-      icon.className = 'btn-icon';
-      icon.textContent = '✓';
-      btn.append(icon, ' Saved!');
-      btn.style.background = 'var(--success)';
-
-      setTimeout(() => {
-        btn.replaceChildren(...originalNodes);
-        btn.style.background = '';
-      }, 1500);
     } catch (err) {
       console.error('Error saving tab:', err);
       alert('Failed to save tab');
@@ -452,27 +489,6 @@ class PopupController {
     await this.render();
   }
 
-  async deleteCurrentFolder() {
-    if (!this.currentFolder) return;
-
-    const folders = await storage.getFolders(this.currentTab);
-    const folder = folders.find(f => f.id === this.currentFolder);
-
-    if (folder) {
-      this.showDeleteModal(folder, 'folder');
-
-      // After deletion, navigate up
-      const originalFolder = this.currentFolder;
-      setTimeout(async () => {
-        if (!this.tempDeleteContext && this.currentFolder === originalFolder) {
-          this.currentFolder = folder.parentId;
-          await this.saveCurrentView();
-          await this.render();
-        }
-      }, 100);
-    }
-  }
-
   async showMoveModal(link) {
     this.tempMoveContext = link;
 
@@ -509,6 +525,20 @@ class PopupController {
     }
   }
 
+  openPlaygroundEmbedded() {
+    const overlay = document.getElementById('playgroundOverlay');
+    const frame = document.getElementById('playgroundFrame');
+    if (!frame.src) {
+      frame.src = browser.runtime.getURL('playground/playground.html') + '?embed=1';
+    }
+    overlay.hidden = false;
+  }
+
+  closePlaygroundEmbedded() {
+    const overlay = document.getElementById('playgroundOverlay');
+    overlay.hidden = true;
+  }
+
   async confirmMove() {
     if (!this.tempMoveContext) return;
 
@@ -542,7 +572,6 @@ async function bootstrapPopup() {
   }
 
   document.body.dataset.authed = 'true';
-  if (logoutBtn) logoutBtn.hidden = false;
   new PopupController();
 }
 
