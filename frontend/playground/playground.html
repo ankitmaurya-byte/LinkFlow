@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkFlow Playground</title>
+  <link rel="stylesheet" href="playground.css">
+</head>
+
+<body>
+  <div class="playground-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="app-icon">⬡</div>
+        <h1 class="app-title">LinkFlow Playground</h1>
+      </div>
+      <button class="btn btn-secondary" id="backToPopupBtn">← Back to Links</button>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-view="research">
+            🔬 AI Research
+          </button>
+          <button class="nav-item" data-view="friends">
+            👥 Friends & Groups
+          </button>
+          <button class="nav-item" data-view="share">
+            🔗 Share Links
+          </button>
+        </nav>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="content-area">
+        <!-- AI Research View -->
+        <div class="view" id="researchView">
+          <div class="view-header">
+            <h2>AI Research Mode</h2>
+            <p class="view-description">Analyze companies, products, and websites with AI</p>
+          </div>
+
+          <div class="research-input-section">
+            <div class="form-group">
+              <label for="companyUrl">Company Website or URL</label>
+              <input type="url" id="companyUrl" class="input" placeholder="https://example.com" />
+            </div>
+
+            <div class="research-options">
+              <button class="option-btn active" data-mode="analyze">
+                🔍 Analyze Company
+              </button>
+              <button class="option-btn" data-mode="summarize">
+                📝 Summarize Product
+              </button>
+              <button class="option-btn" data-mode="techstack">
+                ⚙️ Extract Tech Stack
+              </button>
+              <button class="option-btn" data-mode="opportunities">
+                💡 Suggest Opportunities
+              </button>
+            </div>
+
+            <button class="btn btn-primary" id="startResearchBtn">
+              Start Research
+            </button>
+          </div>
+
+          <!-- Chat-style Results -->
+          <div class="research-results" id="researchResults">
+            <div class="empty-research">
+              <div class="empty-icon">🤖</div>
+              <p>Enter a URL and select a research mode to begin</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Friends & Groups View -->
+        <div class="view hidden" id="friendsView">
+          <div class="view-header">
+            <h2>Friends & Groups</h2>
+            <p class="view-description">Collaborate and share links with others</p>
+          </div>
+
+          <div class="action-section">
+            <button class="btn btn-primary" id="addFriendBtn">
+              + Add Friend
+            </button>
+            <button class="btn btn-secondary" id="createGroupBtn">
+              + Create Group
+            </button>
+          </div>
+
+          <div class="friends-list" id="friendsList">
+            <div class="empty-state-small">
+              <p>No friends added yet</p>
+              <p class="subtext">Add friends to start collaborating</p>
+            </div>
+          </div>
+
+          <div class="groups-section">
+            <h3>Your Groups</h3>
+            <div class="groups-list" id="groupsList">
+              <div class="empty-state-small">
+                <p>No groups created yet</p>
+                <p class="subtext">Create a group to organize collaboration</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Share Links View -->
+        <div class="view hidden" id="shareView">
+          <div class="view-header">
+            <h2>Share Links</h2>
+            <p class="view-description">Send links to friends and groups for discussion</p>
+          </div>
+
+          <div class="share-form">
+            <div class="form-group">
+              <label for="shareLink">Link to Share</label>
+              <input type="url" id="shareLink" class="input"
+                placeholder="https://example.com or select from your saved links" />
+            </div>
+
+            <div class="form-group">
+              <label for="shareRecipient">Share With</label>
+              <select id="shareRecipient" class="select">
+                <option value="">Select friend or group</option>
+                <option value="friend-1">Friend 1 (Demo)</option>
+                <option value="group-1">Group 1 (Demo)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="shareMessage">Message (optional)</label>
+              <textarea id="shareMessage" class="textarea" rows="3"
+                placeholder="Add a note about why you're sharing this..."></textarea>
+            </div>
+
+            <button class="btn btn-primary" id="sendShareBtn">
+              Send Link
+            </button>
+          </div>
+
+          <div class="shared-history">
+            <h3>Recently Shared</h3>
+            <div class="empty-state-small">
+              <p>No links shared yet</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal" id="addFriendModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Friend</h3>
+        <button class="modal-close" data-modal="addFriendModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="friendEmail">Friend's Email</label>
+          <input type="email" id="friendEmail" class="input" placeholder="friend@example.com" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="addFriendModal">Cancel</button>
+        <button class="btn btn-primary" id="saveFriendBtn">Add Friend</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="createGroupModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Group</h3>
+        <button class="modal-close" data-modal="createGroupModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="groupName">Group Name</label>
+          <input type="text" id="groupName" class="input" placeholder="e.g., Research Team" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="createGroupModal">Cancel</button>
+        <button class="btn btn-primary" id="saveGroupBtn">Create Group</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../components/modal.js"></script>
+  <script src="playground.js"></script>
+</body>
+
+</html>

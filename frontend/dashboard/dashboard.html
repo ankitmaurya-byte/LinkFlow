@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkFlow Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="../components/login-form.css">
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="app-icon">⬡</div>
+        <h1 class="app-title">LinkFlow Dashboard</h1>
+      </div>
+      <div class="header-actions">
+        <button class="logout-btn" id="logoutBtn" title="Log out" hidden>Log out</button>
+        <button class="btn btn-secondary" id="playgroundBtn">
+          🔬 Playground
+        </button>
+        <button class="btn btn-primary" id="saveCurrentTabBtn">
+          + Save Current Tab
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="search-container">
+          <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search..." />
+        </div>
+
+        <nav class="tabs-nav">
+          <button class="tab-btn active" data-tab="all-links">
+            📚 All Links
+            <span class="tab-count">0</span>
+          </button>
+          <button class="tab-btn" data-tab="work">
+            💼 Work
+            <span class="tab-count">0</span>
+          </button>
+          <button class="tab-btn" data-tab="personal">
+            👤 Personal
+            <span class="tab-count">0</span>
+          </button>
+          <button class="tab-btn" data-tab="inspiration">
+            💡 Inspiration
+            <span class="tab-count">0</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-actions">
+          <button class="btn btn-outline btn-block" id="newFolderBtn">
+            📁 New Folder
+          </button>
+          <button class="btn btn-outline btn-block" id="pasteUrlBtn">
+            📋 Paste URL
+          </button>
+          <button class="btn btn-outline btn-block" id="importBookmarksBtn">
+            📥 Import bookmarks.html
+          </button>
+          <input type="file" id="bookmarksFileInput" accept=".html,text/html" hidden>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="content-area">
+        <!-- Breadcrumbs -->
+        <div class="breadcrumbs" id="breadcrumbs" style="display: none;"></div>
+
+        <!-- View Controls -->
+        <div class="view-controls">
+          <div class="view-mode">
+            <button class="view-mode-btn active" data-mode="grid">
+              ⊞ Grid
+            </button>
+            <button class="view-mode-btn" data-mode="list">
+              ☰ List
+            </button>
+          </div>
+
+          <div class="sort-controls">
+            <select class="select select-sm" id="sortBy">
+              <option value="recent">Most Recent</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name">Name (A-Z)</option>
+              <option value="platform">Platform</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Items Grid/List -->
+        <div class="items-container grid-view" id="itemsContainer">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📂</div>
+          <h3>No links yet</h3>
+          <p>Start saving links to see them here</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modals (same as popup) -->
+  <div class="modal" id="pasteUrlModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Custom Link</h3>
+        <button class="modal-close" data-modal="pasteUrlModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="customUrl">URL</label>
+          <input type="url" id="customUrl" class="input" placeholder="https://example.com" required />
+        </div>
+        <div class="form-group">
+          <label for="customTitle">Name (optional)</label>
+          <input type="text" id="customTitle" class="input" placeholder="My Link" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="pasteUrlModal">Cancel</button>
+        <button class="btn btn-primary" id="saveCustomLinkBtn">Save Link</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="newFolderModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Folder</h3>
+        <button class="modal-close" data-modal="newFolderModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="folderName">Folder Name</label>
+          <input type="text" id="folderName" class="input" placeholder="e.g., Frontend Resources" required />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="newFolderModal">Cancel</button>
+        <button class="btn btn-primary" id="createFolderBtn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="confirmDeleteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm Delete</h3>
+        <button class="modal-close" data-modal="confirmDeleteModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteMessage">Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="confirmDeleteModal">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../lib/api.js"></script>
+  <script src="../lib/auth.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/platform-detector.js"></script>
+  <script src="../lib/bookmarks-import.js"></script>
+  <script src="../components/modal.js"></script>
+  <script src="../components/breadcrumbs.js"></script>
+  <script src="../components/link-card.js"></script>
+  <script src="../components/folder-card.js"></script>
+  <script src="../components/login-form.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+
+</html>

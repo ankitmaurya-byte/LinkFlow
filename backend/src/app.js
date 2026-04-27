@@ -1,5 +1,6 @@
 import express from 'express';
 import { errorHandler, notFound } from './middleware/error.js';
+import { corsMiddleware } from './middleware/cors.js';
 import { router as authRouter, meRouter } from './routes/auth.js';
 import { router as bookmarksRouter } from './routes/bookmarks.js';
 import { router as friendsRouter, userBookmarksRouter } from './routes/friends.js';
@@ -8,6 +9,7 @@ import { router as chatRouter } from './routes/chat.js';
 
 export function createApp() {
   const app = express();
+  app.use(corsMiddleware);
   app.use(express.json({ limit: '256kb' }));
 
   app.get('/health', (_req, res) => res.json({ ok: true }));

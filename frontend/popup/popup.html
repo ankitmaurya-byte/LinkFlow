@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkFlow</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="../components/login-form.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="app-icon">⬡</div>
+      <h1 class="app-title">LinkFlow</h1>
+    </div>
+    <div class="header-right">
+      <button class="logout-btn" id="logoutBtn" title="Log out" hidden>Log out</button>
+      <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">
+        <span>⚙️</span>
+      </button>
+    </div>
+  </header>
+  <style>
+    .header-right { display: flex; align-items: center; gap: 8px; }
+  </style>
+
+  <!-- Primary Action -->
+  <div class="primary-action">
+    <button class="btn btn-primary" id="saveCurrentTabBtn">
+      <span class="btn-icon">+</span>
+      Save Current Tab
+    </button>
+  </div>
+
+  <!-- Secondary Actions -->
+  <div class="secondary-actions">
+    <button class="btn btn-secondary" id="pasteUrlBtn">
+      <span class="btn-icon">📋</span>
+      Paste URL
+    </button>
+    <button class="btn btn-secondary" id="newFolderBtn">
+      <span class="btn-icon">📁</span>
+      New Folder
+    </button>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <nav class="tabs-nav" id="tabsNav">
+    <button class="tab-btn active" data-tab="all-links">All Links</button>
+    <button class="tab-btn" data-tab="work">
+      Work
+      <span class="tab-badge" data-count="0">0</span>
+    </button>
+    <button class="tab-btn" data-tab="personal">
+      Personal
+      <span class="tab-badge" data-count="0">0</span>
+    </button>
+    <button class="tab-btn" data-tab="inspiration">
+      Inspiration
+      <span class="tab-badge" data-count="0">0</span>
+    </button>
+  </nav>
+
+  <!-- Breadcrumbs -->
+  <div class="breadcrumbs" id="breadcrumbs" style="display: none;">
+    <!-- Dynamically populated -->
+  </div>
+
+  <!-- Search -->
+  <div class="search-container">
+    <input 
+      type="text" 
+      class="search-input" 
+      id="searchInput" 
+      placeholder="🔍 Search your links..."
+    />
+  </div>
+
+  <!-- Content Area -->
+  <div class="content" id="content">
+    <!-- Folder Actions (shown when inside folder) -->
+    <div class="folder-actions" id="folderActions" style="display: none;">
+      <button class="btn btn-sm btn-outline" id="addLinkInFolderBtn">
+        <span>+</span> Add Link
+      </button>
+      <button class="btn btn-sm btn-outline" id="addSubFolderBtn">
+        <span>📁</span> Add Sub-folder
+      </button>
+      <button class="btn btn-sm btn-danger-outline" id="deleteFolderBtn">
+        <span>🗑️</span> Delete Folder
+      </button>
+    </div>
+
+    <!-- Links and Folders Container -->
+    <div class="items-container" id="itemsContainer">
+      <!-- Dynamically populated with folders and links -->
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <div class="empty-icon">📂</div>
+      <p class="empty-text">No links yet</p>
+      <p class="empty-subtext">Save your first link to get started</p>
+    </div>
+
+    <!-- Playground Link -->
+    <div class="playground-link-container">
+      <button class="btn btn-playground" id="playgroundBtn">
+        🔬 Open Playground
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="status-indicator">●</span>
+      <span class="status-text">All changes saved</span>
+    </div>
+    <button class="footer-link" id="openDashboardBtn">
+      Open Dashboard →
+    </button>
+  </footer>
+
+  <!-- Modals -->
+  
+  <!-- Paste URL Modal -->
+  <div class="modal" id="pasteUrlModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Custom Link</h3>
+        <button class="modal-close" data-modal="pasteUrlModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="customUrl">URL</label>
+          <input 
+            type="url" 
+            id="customUrl" 
+            class="input" 
+            placeholder="https://example.com"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="customTitle">Name (optional)</label>
+          <input 
+            type="text" 
+            id="customTitle" 
+            class="input" 
+            placeholder="My Link"
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="pasteUrlModal">Cancel</button>
+        <button class="btn btn-primary" id="saveCustomLinkBtn">Save Link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Folder Modal -->
+  <div class="modal" id="newFolderModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Create Folder</h3>
+        <button class="modal-close" data-modal="newFolderModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="folderName">Folder Name</label>
+          <input 
+            type="text" 
+            id="folderName" 
+            class="input" 
+            placeholder="e.g., Frontend Resources"
+            required
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="newFolderModal">Cancel</button>
+        <button class="btn btn-primary" id="createFolderBtn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Modal -->
+  <div class="modal" id="renameModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Rename</h3>
+        <button class="modal-close" data-modal="renameModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="renameInput">New Name</label>
+          <input 
+            type="text" 
+            id="renameInput" 
+            class="input" 
+            required
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="renameModal">Cancel</button>
+        <button class="btn btn-primary" id="saveRenameBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div class="modal" id="confirmDeleteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm Delete</h3>
+        <button class="modal-close" data-modal="confirmDeleteModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteMessage">Are you sure you want to delete this?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="confirmDeleteModal">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move Link Modal -->
+  <div class="modal" id="moveLinkModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Move Link</h3>
+        <button class="modal-close" data-modal="moveLinkModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="moveToTab">Tab</label>
+          <select id="moveToTab" class="select">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="moveToFolder">Folder (optional)</label>
+          <select id="moveToFolder" class="select">
+            <option value="">No Folder (Root)</option>
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="moveLinkModal">Cancel</button>
+        <button class="btn btn-primary" id="confirmMoveBtn">Move</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../lib/api.js"></script>
+  <script src="../lib/auth.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/platform-detector.js"></script>
+  <script src="../components/modal.js"></script>
+  <script src="../components/breadcrumbs.js"></script>
+  <script src="../components/link-card.js"></script>
+  <script src="../components/folder-card.js"></script>
+  <script src="../components/login-form.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

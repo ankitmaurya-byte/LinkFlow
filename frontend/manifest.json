@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "LinkFlow",
+  "version": "1.0.0",
+    "browser_specific_settings": {
+    "gecko": {
+      "id": "ankitmaurya2989@gmail.com",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "description": "A modern bookmark manager with folder organization and AI-powered research playground",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "unlimitedStorage",
+    "bookmarks",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://localhost:4000/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png"
+    },
+    "default_title": "LinkFlow"
+  },
+  "background": {
+    "scripts": ["lib/bookmarks-sync.js", "background.js"]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
