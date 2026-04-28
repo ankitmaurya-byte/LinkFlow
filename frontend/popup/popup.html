@@ -8,44 +8,66 @@
   <link rel="stylesheet" href="../components/login-form.css">
 </head>
 <body>
-  <!-- Header -->
-  <header class="header">
-    <div class="settings-corner">
-      <button class="settings-square" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
-        <span>⚙️</span>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <button class="side-item" data-view="links" title="Links">
+        <span class="side-icon">🔗</span>
+        <span class="side-label">Links</span>
       </button>
-      <div class="settings-menu" id="settingsMenu" hidden>
-        <button class="dropdown-item" id="profileBtn">👤 Profile</button>
-        <button class="dropdown-item" id="openDashboardBtn">📊 Open Dashboard</button>
-        <button class="dropdown-item" id="playgroundBtn">🔬 Open Playground</button>
-        <button class="dropdown-item danger" id="logoutBtn">🚪 Log out</button>
+      <button class="side-item" data-view="todo" title="Todo">
+        <span class="side-icon">✅</span>
+        <span class="side-label">Todo</span>
+      </button>
+      <button class="side-item" id="openDashboardBtn" title="Dashboard">
+        <span class="side-icon">📊</span>
+        <span class="side-label">Dashboard</span>
+      </button>
+      <button class="side-item" id="playgroundBtn" title="Playground">
+        <span class="side-icon">🔬</span>
+        <span class="side-label">Playground</span>
+      </button>
+      <div class="side-spacer"></div>
+      <button class="side-item" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
+        <span class="side-icon">⚙️</span>
+        <span class="side-label">Settings</span>
+      </button>
+    </aside>
+    <div class="settings-menu" id="settingsMenu" hidden>
+      <button class="dropdown-item" id="profileBtn">👤 Profile</button>
+      <button class="dropdown-item danger" id="logoutBtn">🚪 Log out</button>
+    </div>
+
+    <!-- Main area -->
+    <div class="main-area">
+      <!-- Search (links view only) -->
+      <div class="search-container" id="searchContainer">
+        <input
+          type="text"
+          class="search-input"
+          id="searchInput"
+          placeholder="🔍 Search..."
+        />
+      </div>
+
+      <!-- Links view -->
+      <div class="content view-links" id="content">
+        <div class="tree-container" id="itemsContainer"></div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📂</div>
+          <p class="empty-text">No links yet</p>
+          <p class="empty-subtext">Save your first link to get started</p>
+        </div>
+      </div>
+
+      <!-- Todo view -->
+      <div class="view-todo" id="todoView" hidden>
+        <div class="todo-projects" id="todoProjects"></div>
+        <div class="todo-kanban" id="todoKanban">
+          <div class="todo-empty">Select a project</div>
+        </div>
       </div>
     </div>
-  </header>
-
-  <!-- Search -->
-  <div class="search-container">
-    <input
-      type="text"
-      class="search-input"
-      id="searchInput"
-      placeholder="🔍 Search your links..."
-    />
-  </div>
-
-  <!-- Tree Content Area -->
-  <div class="content" id="content">
-    <div class="tree-container" id="itemsContainer">
-      <!-- Dynamically populated tree -->
-    </div>
-
-    <!-- Empty State -->
-    <div class="empty-state" id="emptyState" style="display: none;">
-      <div class="empty-icon">📂</div>
-      <p class="empty-text">No links yet</p>
-      <p class="empty-subtext">Save your first link to get started</p>
-    </div>
-
   </div>
 
   <!-- Playground Overlay (embedded) -->

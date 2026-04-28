@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkFlow",
-  "version": "1.0.1",
+  "version": "1.0.2",
     "browser_specific_settings": {
     "gecko": {
       "id": "ankitmaurya2989@gmail.com",
@@ -38,9 +38,24 @@
   "background": {
     "scripts": ["lib/bookmarks-sync.js", "background.js"]
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/floating.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/*", "icons/*"],
+      "resources": [
+        "assets/*",
+        "icons/*",
+        "popup/*",
+        "components/*",
+        "lib/*",
+        "playground/*"
+      ],
       "matches": ["<all_urls>"]
     }
   ]

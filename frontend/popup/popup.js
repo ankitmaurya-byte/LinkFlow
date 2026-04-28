@@ -6,6 +6,8 @@ class PopupController {
     this.currentFolder = null;
     this.searchQuery = '';
     this.expanded = new Set();
+    this.viewMode = 'links'; // 'links' | 'todo'
+    this.currentProjectId = null;
 
     this.tempRenameContext = null;
     this.tempDeleteContext = null;
@@ -17,6 +19,7 @@ class PopupController {
   async init() {
     await this.loadCurrentView();
     this.bindEvents();
+    document.querySelector('.side-item[data-view="links"]')?.classList.add('active');
     await this.render();
   }
 
@@ -48,6 +51,13 @@ class PopupController {
   ensurePath() { if (!this.path) this.path = []; }
 
   bindEvents() {
+    // Sidebar view items
+    document.querySelectorAll('.side-item[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.switchView(btn.dataset.view);
+      });
+    });
+
     // Save custom link (modal action)
     document.getElementById('saveCustomLinkBtn').addEventListener('click', () => {
       this.saveCustomLink();
@@ -141,6 +151,325 @@ class PopupController {
   matchesSearch(name) {
     if (!this.searchQuery) return true;
     return name.toLowerCase().includes(this.searchQuery.toLowerCase());
+  }
+
+  async switchView(mode) {
+    this.viewMode = mode;
+    document.querySelectorAll('.side-item[data-view]').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === mode);
+    });
+    document.getElementById('content').hidden = mode !== 'links';
+    document.getElementById('searchContainer').hidden = mode !== 'links';
+    document.getElementById('todoView').hidden = mode !== 'todo';
+    if (mode === 'todo') await this.renderTodo();
+    else await this.render();
+  }
+
+  async renderTodo() {
+    const projWrap = document.getElementById('todoProjects');
+    projWrap.innerHTML = '';
+
+    const head = document.createElement('div');
+    head.className = 'todo-projects-head';
+    head.innerHTML = '<span>Projects</span>';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'todo-projects-add';
+    addBtn.textContent = '+';
+    addBtn.title = 'New project';
+    addBtn.addEventListener('click', async () => {
+      const id = await storage.createTodoProject('Untitled');
+      this.currentProjectId = id;
+      await this.renderTodo();
+      this.focusProjectName(id);
+    });
+    head.appendChild(addBtn);
+    projWrap.appendChild(head);
+
+    const data = await storage.getTodoData();
+    if (data.projects.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:12px;color:var(--text-tertiary);font-size:13px;';
+      empty.textContent = 'No projects. Click + to add.';
+      projWrap.appendChild(empty);
+    }
+
+    for (const p of data.projects) {
+      const row = document.createElement('div');
+      row.className = 'proj-row' + (p.id === this.currentProjectId ? ' selected' : '');
+      row.dataset.projectId = p.id;
+
+      const name = document.createElement('span');
+      name.className = 'proj-name';
+      name.style.flex = '1';
+      name.textContent = p.name;
+      name.spellcheck = false;
+      name.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        this.makeEditable(name, p.name, async (val) => {
+          if (val && val !== p.name) await storage.renameTodoProject(p.id, val);
+          await this.renderTodo();
+        });
+      });
+
+      const edit = document.createElement('button');
+      edit.className = 'proj-edit';
+      edit.textContent = '✏️';
+      edit.title = 'Rename';
+      edit.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.makeEditable(name, p.name, async (val) => {
+          if (val && val !== p.name) await storage.renameTodoProject(p.id, val);
+          await this.renderTodo();
+        });
+      });
+
+      const del = document.createElement('button');
+      del.className = 'proj-del';
+      del.textContent = '🗑️';
+      del.title = 'Delete';
+      del.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Delete project "${p.name}" and all its tasks?`)) return;
+        await storage.deleteTodoProject(p.id);
+        if (this.currentProjectId === p.id) this.currentProjectId = null;
+        await this.renderTodo();
+      });
+      row.append(name, edit, del);
+      row.addEventListener('click', async () => {
+        this.currentProjectId = p.id;
+        await this.renderTodo();
+      });
+      projWrap.appendChild(row);
+    }
+
+    await this.renderKanban();
+  }
+
+  async renderKanban() {
+    const wrap = document.getElementById('todoKanban');
+    wrap.innerHTML = '';
+    if (!this.currentProjectId) {
+      const e = document.createElement('div');
+      e.className = 'todo-empty';
+      e.textContent = 'Select a project';
+      wrap.appendChild(e);
+      return;
+    }
+
+    const data = await storage.getTodoData();
+    const projectId = this.currentProjectId;
+    const statuses = (data.statuses[projectId] || []).slice().sort((a, b) => a.order - b.order);
+    const tasks = data.tasks[projectId] || [];
+
+    for (const status of statuses) {
+      wrap.appendChild(this.renderKanbanCol(projectId, status, tasks));
+    }
+
+    const addCol = document.createElement('button');
+    addCol.className = 'kanban-add-col';
+    addCol.textContent = '+ Add status';
+    addCol.addEventListener('click', async () => {
+      await storage.addTodoStatus(projectId, 'Untitled');
+      await this.renderKanban();
+      const data = await storage.getTodoData();
+      const list = data.statuses[projectId] || [];
+      const last = list[list.length - 1];
+      if (last) this.focusStatusName(last.id);
+    });
+    wrap.appendChild(addCol);
+  }
+
+  renderKanbanCol(projectId, status, allTasks) {
+    const col = document.createElement('div');
+    col.className = 'kanban-col';
+    col.dataset.statusId = status.id;
+
+    const head = document.createElement('div');
+    head.className = 'kanban-col-head';
+    const name = document.createElement('span');
+    name.className = 'kanban-col-name';
+    name.contentEditable = 'true';
+    name.spellcheck = false;
+    name.textContent = status.name;
+    name.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); name.blur(); }
+    });
+    name.addEventListener('blur', async () => {
+      const v = name.textContent.trim();
+      if (v && v !== status.name) await storage.renameTodoStatus(projectId, status.id, v);
+    });
+    const del = document.createElement('button');
+    del.className = 'kanban-col-del';
+    del.textContent = '🗑️';
+    del.title = 'Delete status';
+    del.addEventListener('click', async () => {
+      if (!confirm(`Delete status "${status.name}" and its tasks?`)) return;
+      await storage.deleteTodoStatus(projectId, status.id);
+      await this.renderKanban();
+    });
+    head.append(name, del);
+    col.appendChild(head);
+
+    const list = document.createElement('div');
+    list.className = 'kanban-list';
+    list.dataset.statusId = status.id;
+
+    list.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      list.classList.add('drag-over');
+    });
+    list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
+    list.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      list.classList.remove('drag-over');
+      const taskId = e.dataTransfer.getData('text/task');
+      if (!taskId) return;
+      const afterEl = this.getDragAfterElement(list, e.clientY);
+      const tasksInCol = Array.from(list.querySelectorAll('.kanban-task'));
+      let newIndex = tasksInCol.length;
+      if (afterEl) newIndex = tasksInCol.indexOf(afterEl);
+      await storage.moveTodoTask(projectId, taskId, status.id, newIndex);
+      await this.renderKanban();
+    });
+
+    const colTasks = allTasks
+      .filter(t => t.statusId === status.id)
+      .sort((a, b) => a.order - b.order);
+
+    for (const task of colTasks) {
+      list.appendChild(this.renderTaskCard(projectId, task));
+    }
+    col.appendChild(list);
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'kanban-add';
+    addBtn.textContent = '+ Add task';
+    addBtn.addEventListener('click', async () => {
+      await storage.addTodoTask(projectId, status.id, 'Untitled');
+      await this.renderKanban();
+      const data = await storage.getTodoData();
+      const list = (data.tasks[projectId] || []).filter(t => t.statusId === status.id);
+      const last = list[list.length - 1];
+      if (last) this.focusTaskCard(last.id);
+    });
+    col.appendChild(addBtn);
+    return col;
+  }
+
+  renderTaskCard(projectId, task) {
+    const card = document.createElement('div');
+    card.className = 'kanban-task';
+    card.draggable = true;
+    card.dataset.taskId = task.id;
+    card.textContent = task.title;
+
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/task', task.id);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+    });
+
+    card.addEventListener('dblclick', () => {
+      this.makeEditable(card, task.title, async (val) => {
+        const finalTitle = val || task.title || 'Untitled';
+        if (finalTitle !== task.title) {
+          await storage.updateTodoTask(projectId, task.id, { title: finalTitle });
+          await this.renderKanban();
+        }
+      });
+    });
+
+    // Right-click to delete
+    card.addEventListener('contextmenu', async (e) => {
+      e.preventDefault();
+      if (confirm(`Delete task "${task.title}"?`)) {
+        await storage.deleteTodoTask(projectId, task.id);
+        await this.renderKanban();
+      }
+    });
+
+    return card;
+  }
+
+  makeEditable(el, originalText, onCommit) {
+    el.contentEditable = 'true';
+    el.spellcheck = false;
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    const stopClick = (e) => e.stopPropagation();
+    el.addEventListener('click', stopClick);
+    el.addEventListener('mousedown', stopClick);
+
+    let done = false;
+    const finish = async (commit) => {
+      if (done) return;
+      done = true;
+      el.contentEditable = 'false';
+      el.removeEventListener('click', stopClick);
+      el.removeEventListener('mousedown', stopClick);
+      const val = el.textContent.trim();
+      if (commit) await onCommit(val);
+      else el.textContent = originalText;
+    };
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+    el.addEventListener('blur', () => finish(true), { once: true });
+  }
+
+  focusProjectName(projectId) {
+    const row = document.querySelector(`.proj-row[data-project-id="${projectId}"]`);
+    if (!row) return;
+    const name = row.querySelector('.proj-name');
+    if (!name) return;
+    this.makeEditable(name, name.textContent, async (val) => {
+      const finalName = val || 'Untitled';
+      await storage.renameTodoProject(projectId, finalName);
+      await this.renderTodo();
+    });
+  }
+
+  focusStatusName(statusId) {
+    const head = document.querySelector(`.kanban-col[data-status-id="${statusId}"] .kanban-col-name`);
+    if (!head) return;
+    head.focus();
+    const range = document.createRange();
+    range.selectNodeContents(head);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  focusTaskCard(taskId) {
+    const card = document.querySelector(`.kanban-task[data-task-id="${taskId}"]`);
+    if (!card) return;
+    const original = card.textContent;
+    this.makeEditable(card, original, async (val) => {
+      const finalTitle = val || 'Untitled';
+      await storage.updateTodoTask(this.currentProjectId, taskId, { title: finalTitle });
+      await this.renderKanban();
+    });
+  }
+
+  getDragAfterElement(container, y) {
+    const cards = Array.from(container.querySelectorAll('.kanban-task:not(.dragging)'));
+    return cards.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
   async render() {

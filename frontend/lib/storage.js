@@ -188,6 +188,109 @@ class StorageManager {
     await this.set({ currentView: view });
   }
 
+  // === TODO ===
+  async getTodoData() {
+    const { todoData } = await this.get(['todoData']);
+    return todoData || { projects: [], statuses: {}, tasks: {} };
+  }
+
+  async setTodoData(data) {
+    await this.set({ todoData: data });
+  }
+
+  async createTodoProject(name) {
+    const data = await this.getTodoData();
+    const id = `proj-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    data.projects.push({ id, name, createdAt: new Date().toISOString() });
+    data.statuses[id] = [
+      { id: `st-${id}-todo`, name: 'Todo', order: 0 },
+      { id: `st-${id}-prog`, name: 'In Progress', order: 1 },
+      { id: `st-${id}-done`, name: 'Done', order: 2 }
+    ];
+    data.tasks[id] = [];
+    await this.setTodoData(data);
+    return id;
+  }
+
+  async renameTodoProject(projectId, name) {
+    const data = await this.getTodoData();
+    const p = data.projects.find(p => p.id === projectId);
+    if (p) { p.name = name; await this.setTodoData(data); }
+  }
+
+  async deleteTodoProject(projectId) {
+    const data = await this.getTodoData();
+    data.projects = data.projects.filter(p => p.id !== projectId);
+    delete data.statuses[projectId];
+    delete data.tasks[projectId];
+    await this.setTodoData(data);
+  }
+
+  async addTodoStatus(projectId, name) {
+    const data = await this.getTodoData();
+    const list = data.statuses[projectId] || [];
+    list.push({
+      id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      order: list.length
+    });
+    data.statuses[projectId] = list;
+    await this.setTodoData(data);
+  }
+
+  async renameTodoStatus(projectId, statusId, name) {
+    const data = await this.getTodoData();
+    const s = (data.statuses[projectId] || []).find(s => s.id === statusId);
+    if (s) { s.name = name; await this.setTodoData(data); }
+  }
+
+  async deleteTodoStatus(projectId, statusId) {
+    const data = await this.getTodoData();
+    data.statuses[projectId] = (data.statuses[projectId] || []).filter(s => s.id !== statusId);
+    data.tasks[projectId] = (data.tasks[projectId] || []).filter(t => t.statusId !== statusId);
+    await this.setTodoData(data);
+  }
+
+  async addTodoTask(projectId, statusId, title) {
+    const data = await this.getTodoData();
+    const list = data.tasks[projectId] || [];
+    list.push({
+      id: `tk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      statusId,
+      title,
+      order: list.filter(t => t.statusId === statusId).length,
+      createdAt: new Date().toISOString()
+    });
+    data.tasks[projectId] = list;
+    await this.setTodoData(data);
+  }
+
+  async updateTodoTask(projectId, taskId, patch) {
+    const data = await this.getTodoData();
+    const t = (data.tasks[projectId] || []).find(t => t.id === taskId);
+    if (t) { Object.assign(t, patch); await this.setTodoData(data); }
+  }
+
+  async deleteTodoTask(projectId, taskId) {
+    const data = await this.getTodoData();
+    data.tasks[projectId] = (data.tasks[projectId] || []).filter(t => t.id !== taskId);
+    await this.setTodoData(data);
+  }
+
+  async moveTodoTask(projectId, taskId, newStatusId, newIndex) {
+    const data = await this.getTodoData();
+    const list = data.tasks[projectId] || [];
+    const task = list.find(t => t.id === taskId);
+    if (!task) return;
+    task.statusId = newStatusId;
+    // reorder within new status
+    const inStatus = list.filter(t => t.statusId === newStatusId && t.id !== taskId)
+      .sort((a, b) => a.order - b.order);
+    inStatus.splice(newIndex, 0, task);
+    inStatus.forEach((t, i) => { t.order = i; });
+    await this.setTodoData(data);
+  }
+
   // === SEARCH ===
   async searchLinks(tabId, query) {
     const allLinks = await this.getAllLinks(tabId);
