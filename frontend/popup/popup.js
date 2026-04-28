@@ -108,17 +108,6 @@ class PopupController {
       browser.runtime.sendMessage({ type: 'OPEN_DASHBOARD' });
     });
 
-    // Open playground (embedded inside popup) — from settings menu
-    document.getElementById('playgroundBtn').addEventListener('click', () => {
-      settingsMenu.hidden = true;
-      settingsBtn.setAttribute('aria-expanded', 'false');
-      this.openPlaygroundEmbedded();
-    });
-
-    document.getElementById('closePlaygroundBtn').addEventListener('click', () => {
-      this.closePlaygroundEmbedded();
-    });
-
     // Rename modal save
     document.getElementById('saveRenameBtn').addEventListener('click', () => {
       this.saveRename();
@@ -161,7 +150,9 @@ class PopupController {
     document.getElementById('content').hidden = mode !== 'links';
     document.getElementById('searchContainer').hidden = mode !== 'links';
     document.getElementById('todoView').hidden = mode !== 'todo';
+    document.getElementById('playgroundView').hidden = mode !== 'playground';
     if (mode === 'todo') await this.renderTodo();
+    else if (mode === 'playground') this.ensurePlaygroundFrame();
     else await this.render();
   }
 
@@ -907,18 +898,11 @@ class PopupController {
     }
   }
 
-  openPlaygroundEmbedded() {
-    const overlay = document.getElementById('playgroundOverlay');
-    const frame = document.getElementById('playgroundFrame');
-    if (!frame.src) {
+  ensurePlaygroundFrame() {
+    const frame = document.getElementById('playgroundFrameInline');
+    if (frame && !frame.src) {
       frame.src = browser.runtime.getURL('playground/playground.html') + '?embed=1';
     }
-    overlay.hidden = false;
-  }
-
-  closePlaygroundEmbedded() {
-    const overlay = document.getElementById('playgroundOverlay');
-    overlay.hidden = true;
   }
 
   async confirmMove() {

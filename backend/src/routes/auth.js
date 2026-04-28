@@ -32,8 +32,21 @@ function validateCreds(body) {
 router.post('/signup', async (req, res, next) => {
   try {
     validateCreds(req.body);
+    const username = req.body.username.toLowerCase();
+    const existing = await User.findOne({ username });
+    if (existing) {
+      throw new AppError('USERNAME_TAKEN', 'Username is already taken', 409);
+    }
     const passwordHash = await hashPassword(req.body.password);
-    const user = await User.create({ username: req.body.username, passwordHash });
+    let user;
+    try {
+      user = await User.create({ username, passwordHash });
+    } catch (err) {
+      if (err && err.code === 11000) {
+        throw new AppError('USERNAME_TAKEN', 'Username is already taken', 409);
+      }
+      throw err;
+    }
     const accessToken = signAccess({ userId: user._id, username: user.username });
     const { token: refreshToken } = await issueRefresh(user._id);
     res.json({ accessToken, refreshToken, user: publicUser(user) });

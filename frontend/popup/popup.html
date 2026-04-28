@@ -19,13 +19,13 @@
         <span class="side-icon">✅</span>
         <span class="side-label">Todo</span>
       </button>
+      <button class="side-item" data-view="playground" title="Playground">
+        <span class="side-icon">🔬</span>
+        <span class="side-label">Playground</span>
+      </button>
       <button class="side-item" id="openDashboardBtn" title="Dashboard">
         <span class="side-icon">📊</span>
         <span class="side-label">Dashboard</span>
-      </button>
-      <button class="side-item" id="playgroundBtn" title="Playground">
-        <span class="side-icon">🔬</span>
-        <span class="side-label">Playground</span>
       </button>
       <div class="side-spacer"></div>
       <button class="side-item" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
@@ -67,16 +67,12 @@
           <div class="todo-empty">Select a project</div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Playground Overlay (embedded) -->
-  <div class="playground-overlay" id="playgroundOverlay" hidden>
-    <div class="playground-overlay-header">
-      <span class="playground-overlay-title">🔬 Playground</span>
-      <button class="icon-btn" id="closePlaygroundBtn" title="Close">×</button>
+      <!-- Playground view (iframe) -->
+      <div class="view-playground" id="playgroundView" hidden>
+        <iframe class="playground-frame-inline" id="playgroundFrameInline" title="Playground"></iframe>
+      </div>
     </div>
-    <iframe class="playground-frame" id="playgroundFrame" title="Playground"></iframe>
   </div>
 
   <!-- Modals -->

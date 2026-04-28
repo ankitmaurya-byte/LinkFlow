@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 const schema = new mongoose.Schema({
   parentGroupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null, index: true },
   name: { type: String, required: true, trim: true, maxlength: 100 },
-  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  inviteCode: { type: String, unique: true, sparse: true, index: true, maxlength: 16 }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 // NOTE: cycle prevention on `parentGroupId` is deferred — Spec A has no

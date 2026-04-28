@@ -1,201 +1,183 @@
-// Storage management layer for LinkFlow
+// Storage layer — backend-backed.
+// Local cache invalidated on mutation; server is source of truth.
+
+const DEFAULT_TABS = [
+  { id: 'work', name: 'Work' },
+  { id: 'personal', name: 'Personal' },
+  { id: 'inspiration', name: 'Inspiration' }
+];
 
 class StorageManager {
   constructor() {
-    this.storage = browser.storage.local;
+    this.local = browser.storage.local;
+    this.cache = {
+      bookmarksByTab: new Map(), // tabId -> array of bookmarks
+      todoData: null
+    };
   }
 
-  // Get all data
-  async getAll() {
-    return await this.storage.get(null);
+  invalidate() {
+    this.cache.bookmarksByTab.clear();
   }
 
-  // Get specific keys
-  async get(keys) {
-    return await this.storage.get(keys);
+  async _get(keys) { return this.local.get(keys); }
+  async _set(data) { return this.local.set(data); }
+
+  // Internal — fetch all bookmarks for a tab (folders + links) from server.
+  async _fetchTabBookmarks(tabId) {
+    if (this.cache.bookmarksByTab.has(tabId)) return this.cache.bookmarksByTab.get(tabId);
+    try {
+      const data = await api.authedFetch(`/bookmarks?tab=${encodeURIComponent(tabId)}`);
+      const list = data.bookmarks || [];
+      this.cache.bookmarksByTab.set(tabId, list);
+      return list;
+    } catch (err) {
+      console.warn('LinkFlow: bookmarks fetch failed', err);
+      return [];
+    }
   }
 
-  // Set data
-  async set(data) {
-    return await this.storage.set(data);
+  toFolder(b) {
+    return {
+      id: b.id,
+      name: b.name,
+      parentId: b.parentId,
+      tabId: b.tab,
+      createdAt: b.createdAt
+    };
+  }
+
+  toLink(b) {
+    return {
+      id: b.id,
+      title: b.name,
+      url: b.url,
+      platform: b.platform,
+      folderId: b.parentId,
+      tabId: b.tab,
+      createdAt: b.createdAt
+    };
   }
 
   // === TABS ===
   async getTabs() {
-    const { tabs } = await this.get(['tabs']);
-    return tabs || [];
+    return DEFAULT_TABS.slice();
   }
 
-  async updateTabCount(tabId, count) {
-    const tabs = await this.getTabs();
-    const tab = tabs.find(t => t.id === tabId);
-    if (tab) {
-      tab.count = count;
-      await this.set({ tabs });
-    }
+  async updateTabCount(_tabId, _count) {
+    /* server-driven; counts derived from queries */
   }
 
   // === FOLDERS ===
   async getFolders(tabId) {
-    const { folders } = await this.get(['folders']);
-    return folders?.[tabId] || [];
+    const all = await this._fetchTabBookmarks(tabId);
+    return all.filter(b => b.kind === 'folder').map(b => this.toFolder(b));
   }
 
   async createFolder(tabId, name, parentId = null) {
-    const { folders } = await this.get(['folders']);
-    const tabFolders = folders?.[tabId] || [];
-
-    const newFolder = {
-      id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name,
-      parentId,
-      tabId,
-      createdAt: new Date().toISOString()
-    };
-
-    tabFolders.push(newFolder);
-
-    const updatedFolders = { ...folders, [tabId]: tabFolders };
-    await this.set({ folders: updatedFolders });
-
-    return newFolder;
+    const data = await api.authedFetch('/bookmarks', {
+      method: 'POST',
+      body: { tab: tabId, parentId, kind: 'folder', name }
+    });
+    this.invalidate();
+    return data.bookmark ? this.toFolder(data.bookmark) : null;
   }
 
   async deleteFolder(tabId, folderId) {
-    const { folders, links } = await this.get(['folders', 'links']);
-
-    // Remove folder
-    const tabFolders = folders?.[tabId] || [];
-    const updatedFolders = tabFolders.filter(f => f.id !== folderId && f.parentId !== folderId);
-
-    // Remove links in folder
-    const tabLinks = links?.[tabId] || [];
-    const updatedLinks = tabLinks.filter(l => l.folderId !== folderId);
-
-    await this.set({
-      folders: { ...folders, [tabId]: updatedFolders },
-      links: { ...links, [tabId]: updatedLinks }
-    });
+    await api.authedFetch(`/bookmarks/${folderId}`, { method: 'DELETE' });
+    this.invalidate();
   }
 
   async renameFolder(tabId, folderId, newName) {
-    const { folders } = await this.get(['folders']);
-    const tabFolders = folders?.[tabId] || [];
-    const folder = tabFolders.find(f => f.id === folderId);
-
-    if (folder) {
-      folder.name = newName;
-      await this.set({ folders: { ...folders, [tabId]: tabFolders } });
-    }
+    await api.authedFetch(`/bookmarks/${folderId}`, {
+      method: 'PATCH',
+      body: { name: newName }
+    });
+    this.invalidate();
   }
 
   // === LINKS ===
   async getLinks(tabId, folderId = null) {
-    const { links } = await this.get(['links']);
-    const tabLinks = links?.[tabId] || [];
-
-    if (folderId === null) {
-      return tabLinks.filter(l => !l.folderId);
-    }
-
-    return tabLinks.filter(l => l.folderId === folderId);
+    const all = await this._fetchTabBookmarks(tabId);
+    return all
+      .filter(b => b.kind === 'link' && (b.parentId || null) === (folderId || null))
+      .map(b => this.toLink(b));
   }
 
   async getAllLinks(tabId) {
-    const { links } = await this.get(['links']);
-    return links?.[tabId] || [];
+    const all = await this._fetchTabBookmarks(tabId);
+    return all.filter(b => b.kind === 'link').map(b => this.toLink(b));
   }
 
   async createLink(tabId, linkData) {
-    const { links } = await this.get(['links']);
-    const tabLinks = links?.[tabId] || [];
-
-    const newLink = {
-      id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: linkData.title,
-      url: linkData.url,
-      platform: linkData.platform,
-      folderId: linkData.folderId || null,
-      tabId,
-      createdAt: new Date().toISOString()
-    };
-
-    tabLinks.push(newLink);
-
-    const updatedLinks = { ...links, [tabId]: tabLinks };
-    await this.set({ links: updatedLinks });
-
-    // Update tab count
-    await this.updateTabCount(tabId, tabLinks.length);
-
-    return newLink;
+    const data = await api.authedFetch('/bookmarks', {
+      method: 'POST',
+      body: {
+        tab: tabId,
+        parentId: linkData.folderId || null,
+        kind: 'link',
+        name: linkData.title,
+        url: linkData.url,
+        platform: linkData.platform || null
+      }
+    });
+    this.invalidate();
+    return data.bookmark ? this.toLink(data.bookmark) : null;
   }
 
   async deleteLink(tabId, linkId) {
-    const { links } = await this.get(['links']);
-    const tabLinks = links?.[tabId] || [];
-    const updatedLinks = tabLinks.filter(l => l.id !== linkId);
-
-    await this.set({ links: { ...links, [tabId]: updatedLinks } });
-    await this.updateTabCount(tabId, updatedLinks.length);
+    await api.authedFetch(`/bookmarks/${linkId}`, { method: 'DELETE' });
+    this.invalidate();
   }
 
   async updateLink(tabId, linkId, updates) {
-    const { links } = await this.get(['links']);
-    const tabLinks = links?.[tabId] || [];
-    const link = tabLinks.find(l => l.id === linkId);
-
-    if (link) {
-      Object.assign(link, updates);
-      await this.set({ links: { ...links, [tabId]: tabLinks } });
-    }
+    const body = {};
+    if (typeof updates.title === 'string') body.name = updates.title;
+    if (typeof updates.url === 'string') body.url = updates.url;
+    if (typeof updates.platform === 'string') body.platform = updates.platform;
+    if (Object.keys(body).length === 0) return;
+    await api.authedFetch(`/bookmarks/${linkId}`, { method: 'PATCH', body });
+    this.invalidate();
   }
 
   async moveLink(fromTabId, linkId, toTabId, toFolderId = null) {
-    const { links } = await this.get(['links']);
-    const fromLinks = links?.[fromTabId] || [];
-    const linkIndex = fromLinks.findIndex(l => l.id === linkId);
-
-    if (linkIndex !== -1) {
-      const link = fromLinks[linkIndex];
-      fromLinks.splice(linkIndex, 1);
-
-      const toLinks = links?.[toTabId] || [];
-      link.tabId = toTabId;
-      link.folderId = toFolderId;
-      toLinks.push(link);
-
-      await this.set({
-        links: {
-          ...links,
-          [fromTabId]: fromLinks,
-          [toTabId]: toLinks
-        }
-      });
-
-      await this.updateTabCount(fromTabId, fromLinks.length);
-      await this.updateTabCount(toTabId, toLinks.length);
-    }
+    await api.authedFetch(`/bookmarks/${linkId}`, {
+      method: 'PATCH',
+      body: { tab: toTabId, parentId: toFolderId }
+    });
+    this.invalidate();
   }
 
-  // === CURRENT VIEW ===
+  // === CURRENT VIEW (local cache only) ===
   async getCurrentView() {
-    const { currentView } = await this.get(['currentView']);
-    return currentView || { tabId: 'all-links', folderId: null, breadcrumbs: [] };
+    const { currentView } = await this._get(['currentView']);
+    return currentView || { tabId: 'work', folderId: null, breadcrumbs: [] };
   }
 
   async setCurrentView(view) {
-    await this.set({ currentView: view });
+    await this._set({ currentView: view });
   }
 
-  // === TODO ===
+  // === TODO (server-backed JSON blob) ===
   async getTodoData() {
-    const { todoData } = await this.get(['todoData']);
-    return todoData || { projects: [], statuses: {}, tasks: {} };
+    if (this.cache.todoData) return this.cache.todoData;
+    try {
+      const res = await api.authedFetch('/todos');
+      this.cache.todoData = res.data || { projects: [], statuses: {}, tasks: {} };
+    } catch (err) {
+      console.warn('LinkFlow: todo fetch failed', err);
+      this.cache.todoData = { projects: [], statuses: {}, tasks: {} };
+    }
+    return this.cache.todoData;
   }
 
   async setTodoData(data) {
-    await this.set({ todoData: data });
+    this.cache.todoData = data;
+    try {
+      await api.authedFetch('/todos', { method: 'PUT', body: { data } });
+    } catch (err) {
+      console.warn('LinkFlow: todo save failed', err);
+    }
   }
 
   async createTodoProject(name) {
@@ -283,7 +265,6 @@ class StorageManager {
     const task = list.find(t => t.id === taskId);
     if (!task) return;
     task.statusId = newStatusId;
-    // reorder within new status
     const inStatus = list.filter(t => t.statusId === newStatusId && t.id !== taskId)
       .sort((a, b) => a.order - b.order);
     inStatus.splice(newIndex, 0, task);
@@ -293,15 +274,13 @@ class StorageManager {
 
   // === SEARCH ===
   async searchLinks(tabId, query) {
-    const allLinks = await this.getAllLinks(tabId);
-    const lowerQuery = query.toLowerCase();
-
-    return allLinks.filter(link =>
-      link.title.toLowerCase().includes(lowerQuery) ||
-      link.url.toLowerCase().includes(lowerQuery)
+    const all = await this.getAllLinks(tabId);
+    const q = query.toLowerCase();
+    return all.filter(l =>
+      (l.title || '').toLowerCase().includes(q) ||
+      (l.url || '').toLowerCase().includes(q)
     );
   }
 }
 
-// Export singleton instance
 const storage = new StorageManager();

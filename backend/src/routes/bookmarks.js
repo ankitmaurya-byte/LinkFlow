@@ -12,6 +12,7 @@ function publicBookmark(b) {
   return {
     id: b._id.toString(),
     parentId: b.parentId ? b.parentId.toString() : null,
+    tab: b.tab || 'work',
     kind: b.kind,
     name: b.name,
     url: b.url,
@@ -41,8 +42,10 @@ async function assertParentOwnedFolder(parentId, ownerId) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const parentId = parseObjectId(req.query.parentId, 'parentId');
-    const list = await Bookmark.find({ ownerId: req.user.id, parentId }).sort({ createdAt: 1 });
+    const filter = { ownerId: req.user.id };
+    if ('parentId' in req.query) filter.parentId = parseObjectId(req.query.parentId, 'parentId');
+    if (typeof req.query.tab === 'string' && req.query.tab) filter.tab = req.query.tab;
+    const list = await Bookmark.find(filter).sort({ createdAt: 1 });
     res.json({ bookmarks: list.map(publicBookmark) });
   } catch (e) { next(e); }
 });
@@ -61,9 +64,11 @@ router.post('/', async (req, res, next) => {
     }
     const parentId = parseObjectId(req.body.parentId, 'parentId');
     await assertParentOwnedFolder(parentId, req.user.id);
+    const tab = (typeof req.body.tab === 'string' && req.body.tab.trim()) ? req.body.tab.trim() : 'work';
     const created = await Bookmark.create({
       ownerId: req.user.id,
       parentId,
+      tab,
       kind,
       name: name.trim(),
       url: kind === 'link' ? url : null,
@@ -97,6 +102,7 @@ router.patch('/:id', async (req, res, next) => {
       bm.parentId = newParent;
     }
     if (typeof req.body.name === 'string' && req.body.name.trim()) bm.name = req.body.name.trim();
+    if (typeof req.body.tab === 'string' && req.body.tab.trim()) bm.tab = req.body.tab.trim();
     if (bm.kind === 'link') {
       if (typeof req.body.url === 'string') bm.url = req.body.url;
       if (typeof req.body.platform === 'string') bm.platform = req.body.platform;

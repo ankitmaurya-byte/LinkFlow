@@ -17,8 +17,25 @@ function publicGroup(g) {
     parentGroupId: g.parentGroupId ? g.parentGroupId.toString() : null,
     name: g.name,
     adminId: g.adminId.toString(),
+    inviteCode: g.inviteCode || null,
     createdAt: g.createdAt
   };
+}
+
+function makeInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+async function generateUniqueCode() {
+  for (let i = 0; i < 6; i++) {
+    const c = makeInviteCode();
+    const ex = await Group.findOne({ inviteCode: c }, { _id: 1 });
+    if (!ex) return c;
+  }
+  return makeInviteCode() + Date.now().toString(36).toUpperCase().slice(-3);
 }
 
 router.post('/', async (req, res, next) => {
@@ -37,13 +54,44 @@ router.post('/', async (req, res, next) => {
       const m = await GroupMember.findOne({ groupId: parent._id, userId: req.user.id });
       if (!m) throw new AppError('FORBIDDEN', 'Not a member of parent group', 403);
     }
+    const inviteCode = await generateUniqueCode();
     const created = await Group.create({
       name: name.trim(),
       parentGroupId: parent ? parent._id : null,
-      adminId: req.user.id
+      adminId: req.user.id,
+      inviteCode
     });
     await GroupMember.create({ groupId: created._id, userId: req.user.id, role: 'admin' });
     res.json({ group: publicGroup(created) });
+  } catch (e) { next(e); }
+});
+
+// Join by invite code (direct join, no admin approval)
+router.post('/join-by-code', async (req, res, next) => {
+  try {
+    const { code } = req.body || {};
+    if (typeof code !== 'string' || !code.trim()) {
+      throw new AppError('VALIDATION', 'code required', 400);
+    }
+    const g = await Group.findOne({ inviteCode: code.trim().toUpperCase() });
+    if (!g) throw new AppError('NOT_FOUND', 'Invalid invite code', 404);
+    const existing = await GroupMember.findOne({ groupId: g._id, userId: req.user.id });
+    if (existing) {
+      return res.json({ group: publicGroup(g), alreadyMember: true });
+    }
+    await GroupMember.create({ groupId: g._id, userId: req.user.id, role: 'member' });
+    res.json({ group: publicGroup(g), alreadyMember: false });
+  } catch (e) { next(e); }
+});
+
+// Regenerate invite code (admin)
+router.post('/:id/invite-code/regen', requireGroupAdmin('id'), async (req, res, next) => {
+  try {
+    const g = await Group.findById(req.params.id);
+    if (!g) throw new AppError('NOT_FOUND', 'Not found', 404);
+    g.inviteCode = await generateUniqueCode();
+    await g.save();
+    res.json({ inviteCode: g.inviteCode });
   } catch (e) { next(e); }
 });
 

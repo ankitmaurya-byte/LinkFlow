@@ -6,6 +6,8 @@ import { router as bookmarksRouter } from './routes/bookmarks.js';
 import { router as friendsRouter, userBookmarksRouter } from './routes/friends.js';
 import { router as groupsRouter } from './routes/groups.js';
 import { router as chatRouter } from './routes/chat.js';
+import { router as todosRouter } from './routes/todos.js';
+import { router as shareRouter } from './routes/share.js';
 
 export function createApp() {
   const app = express();
@@ -21,6 +23,8 @@ export function createApp() {
   app.use(userBookmarksRouter);
   app.use('/groups', groupsRouter);
   app.use('/groups/:id/chat', chatRouter);
+  app.use('/todos', todosRouter);
+  app.use('/share', shareRouter);
 
   app.use(notFound);
   app.use(errorHandler);

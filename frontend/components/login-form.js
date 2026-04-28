@@ -99,7 +99,7 @@ function createLoginOverlay({ onAuthed } = {}) {
 
 function humanizeAuthError(err, mode) {
   const code = err?.code;
-  if (code === 'CONFLICT') return 'Username already taken.';
+  if (code === 'CONFLICT' || code === 'USERNAME_TAKEN') return 'Username already taken.';
   if (code === 'AUTH_INVALID') return 'Wrong username or password.';
   if (code === 'VALIDATION') return err.message || 'Invalid username or password.';
   if (code === 'RATE_LIMITED') return 'Too many attempts. Wait a minute and retry.';

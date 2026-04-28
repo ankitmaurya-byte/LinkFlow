@@ -1,287 +1,460 @@
-// Playground Controller
+// Playground Controller — Friends / Groups / Chat / Share
 
 class PlaygroundController {
   constructor() {
-    this.currentView = 'research';
-    this.currentResearchMode = 'analyze';
+    this.currentView = 'friends';
+    this.selectedChatGroupId = null;
+    this.cachedGroups = [];
     this.init();
   }
 
-  init() {
+  async init() {
     this.applyEmbedMode();
     this.bindEvents();
+    await this.switchView('friends');
   }
 
   applyEmbedMode() {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('embed') === '1') {
-      document.body.classList.add('embed-mode');
-      const back = document.getElementById('backToPopupBtn');
-      if (back) back.hidden = true;
-    }
+    if (params.get('embed') === '1') document.body.classList.add('embed-mode');
   }
 
   bindEvents() {
-    // Navigation
     document.querySelectorAll('.nav-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.switchView(btn.dataset.view);
+      btn.addEventListener('click', () => this.switchView(btn.dataset.view));
+    });
+
+    // Friends
+    document.getElementById('addFriendBtn').addEventListener('click', () => this.sendFriendRequest());
+    document.getElementById('friendUsernameInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.sendFriendRequest();
+    });
+
+    // Groups
+    document.getElementById('createGroupBtn').addEventListener('click', () => this.createGroup());
+    document.getElementById('newGroupName').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.createGroup();
+    });
+    document.getElementById('joinByCodeBtn').addEventListener('click', () => this.joinByCode());
+    document.getElementById('joinCodeInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.joinByCode();
+    });
+
+    // Chat
+    document.getElementById('chatSendBtn').addEventListener('click', () => this.sendChatMessage());
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.sendChatMessage();
+    });
+
+    // Share
+    document.getElementById('shareKind').addEventListener('change', () => this.updateShareForm());
+    document.getElementById('sendShareBtn').addEventListener('click', () => this.sendShare());
+  }
+
+  async switchView(view) {
+    this.currentView = view;
+    document.querySelectorAll('.nav-item').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === view);
+    });
+    ['friendsView', 'groupsView', 'chatView', 'shareView'].forEach(id => {
+      document.getElementById(id).classList.toggle('hidden', id !== `${view}View`);
+    });
+    if (view === 'friends') await this.loadFriends();
+    else if (view === 'groups') await this.loadGroups();
+    else if (view === 'chat') await this.loadChatGroups();
+    else if (view === 'share') await this.loadShareForm();
+  }
+
+  // === FRIENDS ===
+  async sendFriendRequest() {
+    const input = document.getElementById('friendUsernameInput');
+    const username = input.value.trim().toLowerCase();
+    if (!username) return;
+    try {
+      await api.authedFetch('/friends/request', { method: 'POST', body: { username } });
+      input.value = '';
+      alert('Friend request sent.');
+      await this.loadFriends();
+    } catch (err) {
+      alert(err.message || 'Failed to send request');
+    }
+  }
+
+  async loadFriends() {
+    try {
+      const [reqs, friends] = await Promise.all([
+        api.authedFetch('/friends/requests'),
+        api.authedFetch('/friends')
+      ]);
+      this.renderIncoming(reqs.incoming || []);
+      this.renderFriends(friends.friends || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async renderIncoming(list) {
+    const wrap = document.getElementById('incomingFriendsList');
+    wrap.replaceChildren();
+    if (list.length === 0) {
+      wrap.innerHTML = '<div class="empty-state-small"><p>No incoming requests</p></div>';
+      return;
+    }
+    // Need usernames — fetch via fallback (not currently exposed).
+    for (const f of list) {
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      row.innerHTML = `
+        <span>Request from user <code>${f.requesterId}</code></span>
+        <button class="btn btn-sm btn-primary" data-act="accept">Accept</button>
+      `;
+      row.querySelector('[data-act="accept"]').addEventListener('click', async () => {
+        try {
+          await api.authedFetch(`/friends/${f.id}/accept`, { method: 'POST' });
+          await this.loadFriends();
+        } catch (err) { alert(err.message); }
       });
-    });
+      wrap.appendChild(row);
+    }
+  }
 
-    // Back button
-    document.getElementById('backToPopupBtn').addEventListener('click', () => {
-      window.close();
-    });
+  renderFriends(list) {
+    const wrap = document.getElementById('friendsList');
+    wrap.replaceChildren();
+    if (list.length === 0) {
+      wrap.innerHTML = '<div class="empty-state-small"><p>No friends yet</p></div>';
+      return;
+    }
+    for (const f of list) {
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      const name = document.createElement('span');
+      name.textContent = `@${f.username}`;
+      const remove = document.createElement('button');
+      remove.className = 'btn btn-sm btn-danger-outline';
+      remove.textContent = 'Remove';
+      // Removal needs friendship id — not in `/friends` response. Skip for now.
+      remove.disabled = true;
+      remove.title = 'Friend removal not yet wired';
+      row.append(name, remove);
+      wrap.appendChild(row);
+    }
+  }
 
-    // Research mode selection
-    document.querySelectorAll('.option-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.currentResearchMode = btn.dataset.mode;
+  // === GROUPS ===
+  async createGroup() {
+    const input = document.getElementById('newGroupName');
+    const name = input.value.trim();
+    if (!name) return;
+    try {
+      const res = await api.authedFetch('/groups', { method: 'POST', body: { name } });
+      input.value = '';
+      await this.loadGroups();
+      alert(`Group created. Invite code: ${res.group.inviteCode}`);
+    } catch (err) {
+      alert(err.message || 'Failed');
+    }
+  }
+
+  async joinByCode() {
+    const input = document.getElementById('joinCodeInput');
+    const code = input.value.trim().toUpperCase();
+    if (!code) return;
+    try {
+      const res = await api.authedFetch('/groups/join-by-code', { method: 'POST', body: { code } });
+      input.value = '';
+      if (res.alreadyMember) alert(`Already a member of "${res.group.name}".`);
+      else alert(`Joined "${res.group.name}".`);
+      await this.loadGroups();
+    } catch (err) {
+      alert(err.message || 'Failed');
+    }
+  }
+
+  async loadGroups() {
+    try {
+      const res = await api.authedFetch('/groups');
+      this.cachedGroups = res.groups || [];
+      this.renderGroups(this.cachedGroups);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  renderGroups(list) {
+    const wrap = document.getElementById('groupsList');
+    wrap.replaceChildren();
+    if (list.length === 0) {
+      wrap.innerHTML = '<div class="empty-state-small"><p>No groups yet</p></div>';
+      return;
+    }
+    for (const g of list) {
+      const row = document.createElement('div');
+      row.className = 'list-row group-row';
+      row.innerHTML = `
+        <div class="group-row-main">
+          <strong>${escapeText(g.name)}</strong>
+          <div class="group-meta">Invite: <code class="invite-code">${g.inviteCode || '—'}</code></div>
+        </div>
+        <button class="btn btn-sm btn-outline" data-act="copy">Copy code</button>
+        <button class="btn btn-sm btn-secondary" data-act="chat">Open chat</button>
+      `;
+      row.querySelector('[data-act="copy"]').addEventListener('click', async () => {
+        if (!g.inviteCode) return;
+        try { await navigator.clipboard.writeText(g.inviteCode); } catch (_) {}
       });
-    });
-
-    // Start research
-    document.getElementById('startResearchBtn').addEventListener('click', () => {
-      this.startResearch();
-    });
-
-    // Friends & Groups
-    document.getElementById('addFriendBtn')?.addEventListener('click', () => {
-      modalManager.open('addFriendModal');
-    });
-
-    document.getElementById('createGroupBtn')?.addEventListener('click', () => {
-      modalManager.open('createGroupModal');
-    });
-
-    document.getElementById('saveFriendBtn')?.addEventListener('click', () => {
-      this.addFriend();
-    });
-
-    document.getElementById('saveGroupBtn')?.addEventListener('click', () => {
-      this.createGroup();
-    });
-
-    // Share links
-    document.getElementById('sendShareBtn')?.addEventListener('click', () => {
-      this.shareLink();
-    });
-  }
-
-  switchView(viewName) {
-    this.currentView = viewName;
-
-    // Update nav
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.classList.toggle('active', item.dataset.view === viewName);
-    });
-
-    // Update views
-    document.querySelectorAll('.view').forEach(view => {
-      view.classList.add('hidden');
-    });
-
-    const targetView = document.getElementById(`${viewName}View`);
-    if (targetView) {
-      targetView.classList.remove('hidden');
+      row.querySelector('[data-act="chat"]').addEventListener('click', () => {
+        this.selectedChatGroupId = g.id;
+        this.switchView('chat');
+      });
+      wrap.appendChild(row);
     }
   }
 
-  async startResearch() {
-    const urlInput = document.getElementById('companyUrl');
-    const url = urlInput.value.trim();
-
-    if (!url) {
-      urlInput.focus();
+  // === CHAT ===
+  async loadChatGroups() {
+    try {
+      const res = await api.authedFetch('/groups');
+      this.cachedGroups = res.groups || [];
+    } catch (err) {
+      console.error(err);
+    }
+    const wrap = document.getElementById('chatGroupsList');
+    wrap.replaceChildren();
+    if (this.cachedGroups.length === 0) {
+      wrap.innerHTML = '<div class="empty-state-small"><p>No groups</p></div>';
       return;
     }
-
-    const resultsContainer = document.getElementById('researchResults');
-
-    // Clear previous results
-    resultsContainer.innerHTML = '';
-
-    // Add user message
-    this.addChatMessage('user', `Analyze: ${url} (Mode: ${this.currentResearchMode})`);
-
-    // Show loading
-    this.addChatMessage('ai', 'Analyzing...', true);
-
-    // Simulate AI response (mock)
-    setTimeout(() => {
-      this.removeLoadingMessage();
-      this.generateMockResponse(url, this.currentResearchMode);
-    }, 2000);
-  }
-
-  addChatMessage(sender, content, isLoading = false) {
-    const resultsContainer = document.getElementById('researchResults');
-
-    const message = document.createElement('div');
-    message.className = 'chat-message';
-
-    const icon = sender === 'user' ? '👤' : '🤖';
-    const senderLabel = sender === 'user' ? 'You' : 'AI Assistant';
-
-    const header = document.createElement('div');
-    header.className = 'message-header';
-    const iconSpan = document.createElement('span');
-    iconSpan.textContent = icon;
-    const labelSpan = document.createElement('span');
-    labelSpan.textContent = senderLabel;
-    header.append(iconSpan, labelSpan);
-
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-
-    if (isLoading) {
-      const dots = document.createElement('div');
-      dots.className = 'loading-dots';
-      dots.append(
-        document.createElement('span'),
-        document.createElement('span'),
-        document.createElement('span')
-      );
-      contentDiv.appendChild(dots);
-      message.dataset.loading = 'true';
-    } else {
-      contentDiv.textContent = content;
+    for (const g of this.cachedGroups) {
+      const row = document.createElement('div');
+      row.className = 'list-row chat-group-row' + (g.id === this.selectedChatGroupId ? ' selected' : '');
+      row.textContent = g.name;
+      row.addEventListener('click', () => {
+        this.selectedChatGroupId = g.id;
+        this.loadChatGroups();
+        this.loadChatMessages();
+      });
+      wrap.appendChild(row);
     }
-
-    message.append(header, contentDiv);
-
-    resultsContainer.appendChild(message);
-    resultsContainer.scrollTop = resultsContainer.scrollHeight;
+    if (this.selectedChatGroupId) await this.loadChatMessages();
   }
 
-  removeLoadingMessage() {
-    const loading = document.querySelector('[data-loading="true"]');
-    if (loading) {
-      loading.remove();
-    }
-  }
-
-  generateMockResponse(url, mode) {
-    let response = '';
-
-    switch (mode) {
-      case 'analyze':
-        response = `**Company Analysis for ${url}:**\n\n`;
-        response += `• Industry: Technology/Software\n`;
-        response += `• Target Market: B2B SaaS\n`;
-        response += `• Key Features: Cloud-based platform, collaborative tools\n`;
-        response += `• Business Model: Subscription-based\n`;
-        response += `• Competitive Advantages: User-friendly interface, strong integration ecosystem\n\n`;
-        response += `This appears to be a well-established company with a focus on enterprise solutions.`;
-        break;
-
-      case 'summarize':
-        response = `**Product Summary:**\n\n`;
-        response += `The product is a comprehensive platform designed to help teams collaborate efficiently. `;
-        response += `It offers features like real-time editing, task management, and seamless integrations with popular tools. `;
-        response += `The platform is built for scalability and is suitable for teams of all sizes.`;
-        break;
-
-      case 'techstack':
-        response = `**Estimated Tech Stack:**\n\n`;
-        response += `Frontend:\n`;
-        response += `• React.js or Vue.js\n`;
-        response += `• TypeScript\n`;
-        response += `• Modern CSS framework\n\n`;
-        response += `Backend:\n`;
-        response += `• Node.js or Python\n`;
-        response += `• PostgreSQL or MongoDB\n`;
-        response += `• Redis for caching\n\n`;
-        response += `Infrastructure:\n`;
-        response += `• AWS or Google Cloud\n`;
-        response += `• Docker/Kubernetes\n`;
-        response += `• CDN for static assets`;
-        break;
-
-      case 'opportunities':
-        response = `**Potential Opportunities:**\n\n`;
-        response += `1. **Partnership**: Integrate your product with their platform\n`;
-        response += `2. **Job Opportunities**: They appear to be growing - check their careers page\n`;
-        response += `3. **Learning**: Study their UX patterns for inspiration\n`;
-        response += `4. **Market Gap**: Consider building complementary tools for their ecosystem\n`;
-        response += `5. **Investment**: If they're fundraising, this could be an opportunity for investors`;
-        break;
-
-      default:
-        response = 'Analysis complete. Please select a research mode.';
-    }
-
-    // Format response with basic markdown support
-    const formattedResponse = response
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
-
-    this.addChatMessage('ai', formattedResponse);
-  }
-
-  addFriend() {
-    const emailInput = document.getElementById('friendEmail');
-    const email = emailInput.value.trim();
-
-    if (!email) {
-      emailInput.focus();
+  async loadChatMessages() {
+    const header = document.getElementById('chatHeader');
+    const composer = document.getElementById('chatComposer');
+    const messagesEl = document.getElementById('chatMessages');
+    if (!this.selectedChatGroupId) {
+      header.textContent = 'Select a group';
+      composer.hidden = true;
+      messagesEl.replaceChildren();
       return;
     }
-
-    // Mock: Add friend (would normally save to storage)
-    alert(`Friend request sent to ${email}`);
-    modalManager.close('addFriendModal');
+    const g = this.cachedGroups.find(g => g.id === this.selectedChatGroupId);
+    header.textContent = g ? g.name : 'Chat';
+    composer.hidden = false;
+    try {
+      const res = await api.authedFetch(`/groups/${this.selectedChatGroupId}/chat?limit=100`);
+      this.renderMessages(res.messages || []);
+    } catch (err) {
+      console.error(err);
+    }
   }
 
-  createGroup() {
-    const nameInput = document.getElementById('groupName');
-    const name = nameInput.value.trim();
+  renderMessages(list) {
+    const wrap = document.getElementById('chatMessages');
+    wrap.replaceChildren();
+    const me = (auth.getCurrentUser ? null : null); // placeholder
+    for (const m of list) {
+      const card = document.createElement('div');
+      card.className = 'chat-msg';
+      const sender = document.createElement('div');
+      sender.className = 'chat-sender';
+      sender.textContent = `@${m.senderUsername || m.senderId.slice(-4)}`;
+      const body = document.createElement('div');
+      body.className = 'chat-body';
+      if (m.kind === 'text') {
+        body.textContent = m.text || '';
+      } else if (m.kind === 'url') {
+        const a = document.createElement('a');
+        a.href = m.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = m.title || m.url;
+        body.appendChild(a);
+        if (m.text) {
+          const note = document.createElement('div');
+          note.className = 'chat-note';
+          note.textContent = m.text;
+          body.appendChild(note);
+        }
+      } else if (m.kind === 'folder') {
+        body.textContent = `📁 Folder: ${m.title || ''}`;
+        if (m.payload && Array.isArray(m.payload.links)) {
+          const ul = document.createElement('ul');
+          ul.style.marginTop = '6px';
+          for (const link of m.payload.links) {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = link.url;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = link.title || link.url;
+            li.appendChild(a);
+            ul.appendChild(li);
+          }
+          body.appendChild(ul);
+        }
+      } else if (m.kind === 'bookmark') {
+        const a = document.createElement('a');
+        a.href = m.url || '#';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = `🔖 ${m.title || m.url || 'Bookmark'}`;
+        body.appendChild(a);
+      }
+      const ts = document.createElement('div');
+      ts.className = 'chat-time';
+      ts.textContent = new Date(m.createdAt).toLocaleString();
+      card.append(sender, body, ts);
+      wrap.appendChild(card);
+    }
+    wrap.scrollTop = wrap.scrollHeight;
+  }
 
-    if (!name) {
-      nameInput.focus();
+  async sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || !this.selectedChatGroupId) return;
+    try {
+      await api.authedFetch(`/groups/${this.selectedChatGroupId}/chat`, {
+        method: 'POST',
+        body: { kind: 'text', text }
+      });
+      input.value = '';
+      await this.loadChatMessages();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  // === SHARE ===
+  updateShareForm() {
+    const kind = document.getElementById('shareKind').value;
+    document.getElementById('shareUrlGroup').classList.toggle('hidden', kind !== 'url');
+    document.getElementById('shareBookmarkGroup').classList.toggle('hidden', kind !== 'bookmark');
+    document.getElementById('shareFolderGroup').classList.toggle('hidden', kind !== 'folder');
+  }
+
+  async loadShareForm() {
+    this.updateShareForm();
+    try {
+      const res = await api.authedFetch('/groups');
+      this.cachedGroups = res.groups || [];
+    } catch (err) { console.error(err); }
+    this.renderShareTargets();
+    await this.populateShareSelectors();
+  }
+
+  renderShareTargets() {
+    const wrap = document.getElementById('shareTargets');
+    wrap.replaceChildren();
+    if (this.cachedGroups.length === 0) {
+      wrap.innerHTML = '<div class="empty-state-small"><p>No groups available. Create or join a group first.</p></div>';
       return;
     }
-
-    // Mock: Create group
-    alert(`Group "${name}" created successfully!`);
-    modalManager.close('createGroupModal');
+    for (const g of this.cachedGroups) {
+      const label = document.createElement('label');
+      label.className = 'multi-select-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = g.id;
+      cb.dataset.kind = 'group';
+      const span = document.createElement('span');
+      span.textContent = `🏷️ ${g.name}`;
+      label.append(cb, span);
+      wrap.appendChild(label);
+    }
   }
 
-  shareLink() {
-    const linkInput = document.getElementById('shareLink');
-    const recipientSelect = document.getElementById('shareRecipient');
-    const messageInput = document.getElementById('shareMessage');
+  async populateShareSelectors() {
+    const tabs = await storage.getTabs();
+    const bmSel = document.getElementById('shareBookmarkSelect');
+    const folSel = document.getElementById('shareFolderSelect');
+    bmSel.replaceChildren();
+    folSel.replaceChildren();
 
-    const link = linkInput.value.trim();
-    const recipient = recipientSelect.value;
-    const message = messageInput.value.trim();
+    for (const tab of tabs) {
+      const links = await storage.getAllLinks(tab.id);
+      const folders = await storage.getFolders(tab.id);
+      for (const l of links) {
+        const opt = new Option(`[${tab.name}] ${l.title}`, JSON.stringify({ tabId: tab.id, id: l.id, url: l.url, title: l.title, platform: l.platform }));
+        bmSel.add(opt);
+      }
+      for (const f of folders) {
+        const opt = new Option(`[${tab.name}] 📁 ${f.name}`, JSON.stringify({ tabId: tab.id, id: f.id, name: f.name }));
+        folSel.add(opt);
+      }
+    }
+  }
 
-    if (!link || !recipient) {
-      if (!link) linkInput.focus();
-      else if (!recipient) recipientSelect.focus();
+  async sendShare() {
+    const status = document.getElementById('shareStatus');
+    status.hidden = true;
+    const kind = document.getElementById('shareKind').value;
+    const note = document.getElementById('shareNote').value.trim();
+
+    const targets = Array.from(document.querySelectorAll('#shareTargets input[type="checkbox"]:checked'));
+    if (targets.length === 0) {
+      alert('Select at least one target group.');
       return;
     }
+    const groupIds = targets.map(t => t.value);
 
-    // Mock: Share link
-    alert(`Link shared with ${recipientSelect.options[recipientSelect.selectedIndex].text}`);
+    let body = { groupIds, text: note || null };
+    if (kind === 'url') {
+      const url = document.getElementById('shareUrl').value.trim();
+      if (!url) { alert('URL required'); return; }
+      body.kind = 'url';
+      body.url = url;
+      body.title = url;
+    } else if (kind === 'bookmark') {
+      const sel = document.getElementById('shareBookmarkSelect').value;
+      if (!sel) { alert('Pick a bookmark'); return; }
+      const bm = JSON.parse(sel);
+      body.kind = 'bookmark';
+      body.url = bm.url;
+      body.title = bm.title;
+      body.platform = bm.platform;
+    } else if (kind === 'folder') {
+      const sel = document.getElementById('shareFolderSelect').value;
+      if (!sel) { alert('Pick a folder'); return; }
+      const fol = JSON.parse(sel);
+      const allLinks = await storage.getAllLinks(fol.tabId);
+      const folderLinks = allLinks.filter(l => l.folderId === fol.id);
+      body.kind = 'folder';
+      body.title = fol.name;
+      body.payload = {
+        folderId: fol.id,
+        links: folderLinks.map(l => ({ title: l.title, url: l.url, platform: l.platform }))
+      };
+    }
 
-    // Clear form
-    linkInput.value = '';
-    messageInput.value = '';
-    recipientSelect.value = '';
-  }
-
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    try {
+      const res = await api.authedFetch('/share', { method: 'POST', body });
+      status.hidden = false;
+      status.textContent = `Shared with ${res.shared.length} group${res.shared.length === 1 ? '' : 's'}.`;
+    } catch (err) {
+      alert(err.message || 'Share failed');
+    }
   }
 }
 
-// Initialize
+function escapeText(s) {
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : String(s);
+  return div.innerHTML;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   new PlaygroundController();
 });
