@@ -64,13 +64,10 @@
       height: 48px;
     }
     .panel {
-      position: absolute;
+      position: fixed;
+      left: 0;
+      top: 0;
     }
-    /* Panel anchors based on free-position bubble */
-    :host([data-side="right"])  .panel { top: 0;    left: 56px; }
-    :host([data-side="left"])   .panel { top: 0;    right: 56px; }
-    :host([data-side="tr"])     .panel { bottom: 56px; left: 0; }
-    :host([data-side="tl"])     .panel { bottom: 56px; right: 0; }
     .bubble {
       position: absolute;
       inset: 0;
@@ -157,10 +154,9 @@
 
   let closeTimer = null;
   let dragLock = false;
-  let savedDisplayPos = null; // bubble position before panel-fit nudge
   const PANEL_W = 720;
   const PANEL_H = 560;
-  const GAP = 8;
+  const GAP = 0;
 
   const ensureFrameLoaded = () => {
     if (!frame.src) {
@@ -168,85 +164,76 @@
     }
   };
 
-  function fitPanelToViewport() {
+  // Position panel in viewport coords near bubble; bubble doesn't move.
+  function positionPanel() {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const pos = currentPos;
+    const bx = currentPos.x;
+    const by = currentPos.y;
+    const pw = Math.min(PANEL_W, vw - 16);
+    const ph = Math.min(PANEL_H, vh - 16);
 
-    // Side ordering by available space — try the one with most room first
-    const sides = [
-      { id: 'right', space: vw - (pos.x + BUBBLE) },
-      { id: 'left',  space: pos.x },
-      { id: 'tr',    space: pos.y },     // panel above
-      { id: 'tl',    space: pos.y }
-    ].sort((a, b) => b.space - a.space);
+    // Candidates relative to bubble, in priority order.
+    const candidates = [
+      { x: bx + BUBBLE + GAP,           y: by },                       // right of bubble
+      { x: bx - GAP - pw,               y: by },                       // left of bubble
+      { x: bx,                          y: by + BUBBLE + GAP },        // below bubble
+      { x: bx,                          y: by - GAP - ph },            // above bubble
+      { x: bx + BUBBLE + GAP,           y: by + BUBBLE - ph },         // right, aligned bottom
+      { x: bx - GAP - pw,               y: by + BUBBLE - ph },         // left, aligned bottom
+    ];
 
-    for (const s of sides) {
-      const fit = tryFit(s.id, pos, vw, vh);
-      if (fit.ok) {
-        applyHostPosition(fit.pos);
-        host.setAttribute('data-side', s.id);
-        return;
+    const fitsViewport = (c) => c.x >= 0 && c.y >= 0 && c.x + pw <= vw && c.y + ph <= vh;
+    let chosen = candidates.find(fitsViewport);
+
+    if (!chosen) {
+      // No clean fit — dock panel adjacent to whichever side of bubble has most room
+      // so the bubble always sits on panel's outer boundary, never overlapping it.
+      const sides = [
+        { side: 'left',   space: bx },
+        { side: 'right',  space: vw - (bx + BUBBLE) },
+        { side: 'top',    space: by },
+        { side: 'bottom', space: vh - (by + BUBBLE) }
+      ].sort((a, b) => b.space - a.space);
+      const best = sides[0];
+      let cx, cy;
+      if (best.side === 'left') {
+        cx = bx - pw;
+        cy = Math.max(0, Math.min(by, vh - ph));
+      } else if (best.side === 'right') {
+        cx = bx + BUBBLE;
+        cy = Math.max(0, Math.min(by, vh - ph));
+      } else if (best.side === 'top') {
+        cx = Math.max(0, Math.min(bx, vw - pw));
+        cy = by - ph;
+      } else {
+        cx = Math.max(0, Math.min(bx, vw - pw));
+        cy = by + BUBBLE;
       }
+      chosen = { x: cx, y: cy };
     }
-    // Fallback: pick widest side and nudge bubble fully into viewport
-    const best = sides[0];
-    const fallback = forceFit(best.id, pos, vw, vh);
-    applyHostPosition(fallback);
-    host.setAttribute('data-side', best.id);
-  }
 
-  function tryFit(side, pos, vw, vh) {
-    let { x, y } = pos;
-    const okPos = (px, py) => ({ ok: true, pos: { x: px, y: py } });
-    if (side === 'right') {
-      if (x + BUBBLE + GAP + PANEL_W <= vw && y + PANEL_H <= vh) return okPos(x, y);
-    } else if (side === 'left') {
-      if (x - GAP - PANEL_W >= 0 && y + PANEL_H <= vh) return okPos(x, y);
-    } else if (side === 'tr') {
-      if (y - GAP - PANEL_H >= 0 && x + PANEL_W <= vw) return okPos(x, y);
-    } else if (side === 'tl') {
-      if (y - GAP - PANEL_H >= 0 && x + BUBBLE - PANEL_W >= 0) return okPos(x, y);
-    }
-    return { ok: false };
-  }
-
-  function forceFit(side, pos, vw, vh) {
-    let { x, y } = pos;
-    if (side === 'right') {
-      x = Math.max(0, Math.min(x, vw - BUBBLE - GAP - PANEL_W));
-      y = Math.max(0, Math.min(y, vh - Math.max(BUBBLE, PANEL_H)));
-    } else if (side === 'left') {
-      x = Math.max(GAP + PANEL_W, Math.min(x, vw - BUBBLE));
-      y = Math.max(0, Math.min(y, vh - Math.max(BUBBLE, PANEL_H)));
-    } else if (side === 'tr') {
-      x = Math.max(0, Math.min(x, vw - PANEL_W));
-      y = Math.max(GAP + PANEL_H, Math.min(y, vh - BUBBLE));
-    } else if (side === 'tl') {
-      x = Math.max(PANEL_W - BUBBLE, Math.min(x, vw - BUBBLE));
-      y = Math.max(GAP + PANEL_H, Math.min(y, vh - BUBBLE));
-    }
-    return clampToViewport(x, y);
+    panel.style.left = `${chosen.x}px`;
+    panel.style.top = `${chosen.y}px`;
+    panel.style.width = `${pw}px`;
+    panel.style.height = `${ph}px`;
   }
 
   const openPanel = () => {
     if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
-    if (!savedDisplayPos) savedDisplayPos = { x: currentPos.x, y: currentPos.y };
-    fitPanelToViewport();
+    positionPanel();
     wrap.classList.add('open');
     ensureFrameLoaded();
   };
   const schedClose = () => {
     if (dragLock) return;
     if (closeTimer) clearTimeout(closeTimer);
-    closeTimer = setTimeout(() => {
-      wrap.classList.remove('open');
-      if (savedDisplayPos) {
-        applyHostPosition(clampToViewport(savedDisplayPos.x, savedDisplayPos.y));
-        savedDisplayPos = null;
-      }
-    }, 350);
+    closeTimer = setTimeout(() => wrap.classList.remove('open'), 350);
   };
+
+  window.addEventListener('scroll', () => {
+    if (wrap.classList.contains('open')) positionPanel();
+  }, true);
 
   window.addEventListener('message', (e) => {
     if (e?.data?.type !== 'linkflow-drag') return;
@@ -292,8 +279,9 @@
     dragState = null;
     bubble.classList.remove('dragging');
     if (moved) {
-      savedDisplayPos = null;
-      savePosition(currentPos);
+      const clamped = clampToViewport(currentPos.x, currentPos.y);
+      applyHostPosition(clamped);
+      savePosition(clamped);
     } else {
       openPanel();
     }
