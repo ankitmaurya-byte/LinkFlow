@@ -67,71 +67,54 @@
       position: fixed;
       left: 0;
       top: 0;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(24, 29, 38, 0.12), 0 0 0 1px #dddddd;
+      overflow: hidden;
     }
     .bubble {
       position: absolute;
       inset: 0;
       width: 48px;
       height: 48px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+      border-radius: 9999px;
+      background: #181d26;
+      box-shadow: 0 1px 2px rgba(24, 29, 38, 0.1), 0 0 0 1px #dddddd;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-size: 22px;
+      color: #ffffff;
+      font-size: 20px;
       cursor: grab;
       user-select: none;
       touch-action: none;
-      transition: box-shadow 0.2s;
+      transition: background 0.15s, box-shadow 0.15s;
     }
     .bubble:hover {
-      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.55);
+      background: #0d1218;
     }
     .bubble.dragging {
       cursor: grabbing;
-      box-shadow: 0 8px 22px rgba(124, 58, 237, 0.6);
+      background: #0d1218;
     }
     .panel {
       width: 720px;
       height: 560px;
       max-width: calc(100vw - 32px);
       max-height: calc(100vh - 32px);
-      background: white;
+      background: #ffffff;
       border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      box-shadow: 0 10px 30px rgba(24, 29, 38, 0.12), 0 0 0 1px #dddddd;
       overflow: hidden;
       display: none;
       flex-direction: column;
     }
     .wrap.open .panel { display: flex; }
-    .panel-head {
-      padding: 8px 12px;
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-weight: 600;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
     .panel-frame {
       flex: 1;
       width: 100%;
       border: 0;
     }
-    .close-btn {
-      background: transparent;
-      border: 0;
-      cursor: pointer;
-      font-size: 20px;
-      color: #6b7280;
-      padding: 0 6px;
-      line-height: 1;
-    }
-    .close-btn:hover { color: #111827; }
   `;
   root.appendChild(style);
 

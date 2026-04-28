@@ -1,49 +1,78 @@
-/* ===== DESIGN SYSTEM ===== */
+/* ===== DESIGN SYSTEM (Airtable, per DESIGN.md) ===== */
 :root {
-  /* Colors - Soft Violet/Blue Theme */
-  --primary: #7c3aed;
-  --primary-hover: #6d28d9;
-  --primary-light: #ede9fe;
-  --secondary: #3b82f6;
-  --secondary-hover: #2563eb;
-  
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
-  
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  
+  /* Colors */
+  --primary: #181d26;
+  --primary-active: #0d1218;
+  --primary-light: #f8fafc;        /* used as faint hover/selected surface */
+  --primary-hover: #0d1218;
+  --secondary: #1b61c9;
+  --secondary-hover: #1a3866;
+
+  --ink: #181d26;
+  --body: #333840;
+  --muted: #41454d;
+  --hairline: #dddddd;
+  --border-strong: #9297a0;
+
+  --canvas: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-strong: #e0e2e6;
+  --surface-dark: #181d26;
+  --surface-dark-elevated: #1d1f25;
+
+  --bg-primary: var(--canvas);
+  --bg-secondary: var(--surface-soft);
+  --bg-tertiary: var(--surface-strong);
+
+  --text-primary: var(--ink);
+  --text-secondary: var(--body);
+  --text-tertiary: var(--muted);
+
+  --border: var(--hairline);
+  --border-light: var(--surface-strong);
+
+  --link: #1b61c9;
+  --info: #254fad;
+  --info-border: #458fff;
+  --success: #006400;
+  --danger: #aa2d00;
+  --warning: #d9a441;
+
+  --signature-coral: #aa2d00;
+  --signature-forest: #0a2e0e;
+  --signature-cream: #f5e9d4;
+  --signature-peach: #fcab79;
+  --signature-mint: #a8d8c4;
+  --signature-yellow: #f4d35e;
+
+  /* Shadows — flat, hairline-first */
+  --shadow-sm: 0 0 0 1px var(--hairline);
+  --shadow: 0 0 0 1px var(--hairline);
+  --shadow-md: 0 1px 2px rgba(24, 29, 38, 0.05), 0 0 0 1px var(--hairline);
+  --shadow-lg: 0 4px 12px rgba(24, 29, 38, 0.08), 0 0 0 1px var(--hairline);
+
   /* Border Radius */
-  --radius-sm: 4px;
-  --radius: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  
+  --radius-xs: 2px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+
   /* Spacing */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 12px;
-  --space-lg: 16px;
-  --space-xl: 20px;
-  --space-2xl: 24px;
-  
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-section: 96px;
+
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+  --font-sans: "Haas Grotesk", "Inter Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Haas Groot Disp", "Inter Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* ===== RESET & BASE ===== */
@@ -115,9 +144,9 @@ body {
 }
 
 .side-item.active {
-  background: var(--primary-light);
-  color: var(--primary);
-  font-weight: 600;
+  background: var(--ink);
+  color: var(--canvas);
+  font-weight: 500;
 }
 
 .side-icon {
@@ -173,84 +202,76 @@ body {
   flex-direction: column;
 }
 
-/* ===== BUTTONS ===== */
+/* ===== BUTTONS (Airtable button system) ===== */
 .btn {
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  font-size: 16px;
   font-weight: 500;
+  line-height: 1.4;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   font-family: var(--font-sans);
-  padding: var(--space-md) var(--space-lg);
+  padding: 16px 24px;
 }
 
 .btn-primary {
   background: var(--primary);
-  color: white;
-  width: 100%;
-  padding: var(--space-lg);
-  box-shadow: var(--shadow-md);
+  color: var(--canvas);
 }
 
+.btn-primary:active,
 .btn-primary:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
+  background: var(--primary-active);
 }
 
 .btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  flex: 1;
+  background: var(--canvas);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
 }
 
 .btn-secondary:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--text-tertiary);
+  border-color: var(--border-strong);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
 }
 
 .btn-outline:hover {
-  background: var(--bg-secondary);
+  border-color: var(--border-strong);
 }
 
 .btn-danger {
-  background: var(--danger);
-  color: white;
+  background: var(--signature-coral);
+  color: var(--canvas);
 }
 
 .btn-danger:hover {
-  background: #dc2626;
+  background: #8b2400;
 }
 
 .btn-danger-outline {
   background: transparent;
-  color: var(--danger);
-  border: 1px solid var(--danger);
+  color: var(--signature-coral);
+  border: 1px solid var(--signature-coral);
 }
 
 .btn-danger-outline:hover {
-  background: #fef2f2;
+  background: rgba(170, 45, 0, 0.06);
 }
 
 .btn-sm {
-  padding: var(--space-sm) var(--space-md);
-  font-size: 13px;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
 }
 
 .btn-icon {
@@ -483,8 +504,8 @@ body {
 }
 
 .col-row.selected {
-  background: var(--primary-light);
-  color: var(--primary);
+  background: var(--surface-strong);
+  color: var(--ink);
 }
 
 .col-icon {
@@ -944,9 +965,9 @@ body {
 }
 
 .proj-row.selected {
-  background: var(--primary-light);
-  color: var(--primary);
-  font-weight: 600;
+  background: var(--ink);
+  color: var(--canvas);
+  font-weight: 500;
 }
 
 .proj-row .proj-edit,
