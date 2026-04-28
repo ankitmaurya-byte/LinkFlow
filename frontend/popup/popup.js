@@ -307,6 +307,16 @@ class PopupController {
     }
 
     if (contextItem) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'tree-menu-btn';
+      editBtn.title = 'Edit';
+      editBtn.textContent = '✏️';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.startInlineEdit(row, lbl, contextItem);
+      });
+      row.appendChild(editBtn);
+
       const menuBtn = document.createElement('button');
       menuBtn.className = 'tree-menu-btn';
       menuBtn.textContent = '⋮';
@@ -315,12 +325,55 @@ class PopupController {
         this.showTreeContextMenu(menuBtn, contextItem);
       });
       row.appendChild(menuBtn);
+
+      row.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        this.startInlineEdit(row, lbl, contextItem);
+      });
     }
 
     row.addEventListener('click', () => {
       if (onClick) onClick();
     });
     return row;
+  }
+
+  startInlineEdit(row, labelEl, ctx) {
+    if (row.querySelector('.col-label-input')) return;
+    const target = ctx.type === 'link' ? ctx.link : ctx.folder;
+    const oldName = ctx.type === 'link' ? target.title : target.name;
+    const input = document.createElement('input');
+    input.className = 'col-label-input';
+    input.type = 'text';
+    input.value = oldName;
+    labelEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let done = false;
+    const finish = async (commit) => {
+      if (done) return;
+      done = true;
+      const newName = input.value.trim();
+      if (commit && newName && newName !== oldName) {
+        if (ctx.type === 'link') {
+          await storage.updateLink(ctx.tabId, target.id, { title: newName });
+        } else {
+          await storage.renameFolder(ctx.tabId, target.id, newName);
+        }
+        await this.render();
+      } else {
+        input.replaceWith(labelEl);
+      }
+    };
+
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') finish(true);
+      else if (e.key === 'Escape') finish(false);
+    });
+    input.addEventListener('blur', () => finish(true));
   }
 
   showTreeContextMenu(button, ctx) {

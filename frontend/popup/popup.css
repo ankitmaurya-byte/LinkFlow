@@ -55,14 +55,17 @@
 
 body {
   width: 720px;
-  min-height: 500px;
-  max-height: 600px;
+  height: 560px;
   font-family: var(--font-sans);
   font-size: 14px;
   color: var(--text-primary);
   background: var(--bg-primary);
-  overflow-y: auto;
+  overflow: hidden;
   line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
 }
 
 /* ===== HEADER ===== */
@@ -305,18 +308,22 @@ body {
 
 /* ===== SEARCH ===== */
 .search-container {
-  padding: var(--space-lg);
-  padding-bottom: var(--space-md);
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .search-input {
   width: 100%;
-  padding: var(--space-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 14px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  font-size: 16px;
   font-family: var(--font-sans);
   transition: all 0.2s;
+  margin: 0;
+  display: block;
 }
 
 .search-input:focus {
@@ -328,7 +335,10 @@ body {
 /* ===== CONTENT ===== */
 .content {
   padding: 0;
-  min-height: 200px;
+  margin: 0;
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
 /* ===== COLUMNS (Finder-style) ===== */
@@ -337,19 +347,23 @@ body {
   flex-direction: row;
   align-items: stretch;
   overflow-x: auto;
-  min-height: 320px;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .tree-column {
-  flex: 0 0 180px;
-  min-width: 180px;
-  max-width: 180px;
+  flex: 1 1 0;
+  min-width: 0;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   background: var(--bg-primary);
-  padding: 4px 0;
+  margin: 0;
+  padding: 0;
 }
 
 .tree-column:last-child {
@@ -358,9 +372,10 @@ body {
 
 .col-action-row {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  margin: 0;
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-secondary);
   position: sticky;
@@ -370,25 +385,27 @@ body {
 
 .col-action {
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border: 0;
+  border-radius: 0;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 0;
+  margin: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
+  justify-content: center;
+  gap: 6px;
+  font-size: 18px;
   color: var(--text-primary);
-  max-width: 28px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-  transition: max-width 0.2s, background 0.15s, border-color 0.15s;
+  height: 36px;
+  transition: background 0.15s;
 }
 
 .col-action:hover {
   background: var(--bg-primary);
-  border-color: var(--border);
-  max-width: 200px;
 }
 
 .col-action-icon {
@@ -396,23 +413,23 @@ body {
 }
 
 .col-action-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-secondary);
-  opacity: 0;
-  transition: opacity 0.15s 0.05s;
+  display: none;
 }
 
 .col-action:hover .col-action-label {
-  opacity: 1;
+  display: inline;
 }
 
 .col-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  min-height: 26px;
-  font-size: 13px;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 0;
+  min-height: 44px;
+  font-size: 16px;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -428,7 +445,7 @@ body {
 }
 
 .col-icon {
-  font-size: 14px;
+  font-size: 22px;
   flex-shrink: 0;
 }
 
@@ -436,16 +453,30 @@ body {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 16px;
+}
+
+.col-label-input {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  padding: 4px 6px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .col-arrow {
   color: var(--text-tertiary);
-  font-size: 14px;
+  font-size: 22px;
   flex-shrink: 0;
 }
 
 .col-empty {
-  padding: 8px;
+  padding: 4px;
+  margin: 0;
   color: var(--text-tertiary);
   font-size: 12px;
   font-style: italic;
@@ -456,10 +487,11 @@ body {
   border: 0;
   color: var(--text-tertiary);
   cursor: pointer;
-  padding: 0 4px;
+  padding: 4px 6px;
   font-size: 16px;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, background 0.15s;
+  border-radius: var(--radius-sm);
 }
 
 .col-row:hover .tree-menu-btn {
@@ -468,6 +500,7 @@ body {
 
 .tree-menu-btn:hover {
   color: var(--text-primary);
+  background: rgba(0,0,0,0.05);
 }
 
 /* ===== LINK CARD ===== */
