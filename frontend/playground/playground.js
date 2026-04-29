@@ -74,10 +74,10 @@ class PlaygroundController {
     try {
       await api.authedFetch('/friends/request', { method: 'POST', body: { username } });
       input.value = '';
-      alert('Friend request sent.');
+      await uiAlert('Friend request sent.');
       await this.loadFriends();
     } catch (err) {
-      alert(err.message || 'Failed to send request');
+      await uiAlert(err.message || 'Failed to send request');
     }
   }
 
@@ -113,7 +113,7 @@ class PlaygroundController {
         try {
           await api.authedFetch(`/friends/${f.id}/accept`, { method: 'POST' });
           await this.loadFriends();
-        } catch (err) { alert(err.message); }
+        } catch (err) { await uiAlert(err.message); }
       });
       wrap.appendChild(row);
     }
@@ -151,9 +151,9 @@ class PlaygroundController {
       const res = await api.authedFetch('/groups', { method: 'POST', body: { name } });
       input.value = '';
       await this.loadGroups();
-      alert(`Group created. Invite code: ${res.group.inviteCode}`);
+      await uiAlert(`Group created. Invite code: ${res.group.inviteCode}`);
     } catch (err) {
-      alert(err.message || 'Failed');
+      await uiAlert(err.message || 'Failed');
     }
   }
 
@@ -164,11 +164,11 @@ class PlaygroundController {
     try {
       const res = await api.authedFetch('/groups/join-by-code', { method: 'POST', body: { code } });
       input.value = '';
-      if (res.alreadyMember) alert(`Already a member of "${res.group.name}".`);
-      else alert(`Joined "${res.group.name}".`);
+      if (res.alreadyMember) await uiAlert(`Already a member of "${res.group.name}".`);
+      else await uiAlert(`Joined "${res.group.name}".`);
       await this.loadGroups();
     } catch (err) {
-      alert(err.message || 'Failed');
+      await uiAlert(err.message || 'Failed');
     }
   }
 
@@ -334,7 +334,7 @@ class PlaygroundController {
       input.value = '';
       await this.loadChatMessages();
     } catch (err) {
-      alert(err.message);
+      await uiAlert(err.message);
     }
   }
 
@@ -406,7 +406,7 @@ class PlaygroundController {
 
     const targets = Array.from(document.querySelectorAll('#shareTargets input[type="checkbox"]:checked'));
     if (targets.length === 0) {
-      alert('Select at least one target group.');
+      await uiAlert('Select at least one target group.');
       return;
     }
     const groupIds = targets.map(t => t.value);
@@ -414,13 +414,13 @@ class PlaygroundController {
     let body = { groupIds, text: note || null };
     if (kind === 'url') {
       const url = document.getElementById('shareUrl').value.trim();
-      if (!url) { alert('URL required'); return; }
+      if (!url) { await uiAlert('URL required'); return; }
       body.kind = 'url';
       body.url = url;
       body.title = url;
     } else if (kind === 'bookmark') {
       const sel = document.getElementById('shareBookmarkSelect').value;
-      if (!sel) { alert('Pick a bookmark'); return; }
+      if (!sel) { await uiAlert('Pick a bookmark'); return; }
       const bm = JSON.parse(sel);
       body.kind = 'bookmark';
       body.url = bm.url;
@@ -428,7 +428,7 @@ class PlaygroundController {
       body.platform = bm.platform;
     } else if (kind === 'folder') {
       const sel = document.getElementById('shareFolderSelect').value;
-      if (!sel) { alert('Pick a folder'); return; }
+      if (!sel) { await uiAlert('Pick a folder'); return; }
       const fol = JSON.parse(sel);
       const allLinks = await storage.getAllLinks(fol.tabId);
       const folderLinks = allLinks.filter(l => l.folderId === fol.id);
@@ -445,7 +445,7 @@ class PlaygroundController {
       status.hidden = false;
       status.textContent = `Shared with ${res.shared.length} group${res.shared.length === 1 ? '' : 's'}.`;
     } catch (err) {
-      alert(err.message || 'Share failed');
+      await uiAlert(err.message || 'Share failed');
     }
   }
 }

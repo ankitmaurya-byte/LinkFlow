@@ -16,7 +16,7 @@
         <span class="side-label">Links</span>
       </button>
       <button class="side-item" data-view="todo" title="Todo">
-        <span class="side-icon" data-icon="check"></span>
+        <span class="side-icon" data-icon="clipboard"></span>
         <span class="side-label">Todo</span>
       </button>
       <button class="side-item" data-view="playground" title="Playground">
@@ -224,6 +224,34 @@
     </div>
   </div>
 
+  <!-- Share Folder Modal -->
+  <div class="modal" id="shareFolderModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="shareFolderTitle">Share folder</h3>
+        <button class="modal-close" data-modal="shareFolderModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Groups</label>
+          <div id="shareGroupsList" class="multi-select"></div>
+        </div>
+        <div class="form-group">
+          <label>Friends</label>
+          <div id="shareFriendsList" class="multi-select"></div>
+        </div>
+        <div class="form-group">
+          <label for="shareFolderNote">Optional note</label>
+          <textarea id="shareFolderNote" class="input" rows="2" placeholder="Why are you sharing this?"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="shareFolderModal">Cancel</button>
+        <button class="btn btn-primary" id="sendShareFolderBtn">Share</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Profile Modal -->
   <div class="modal" id="profileModal">
     <div class="modal-content">
@@ -274,6 +302,7 @@
 
   <!-- Scripts -->
   <script src="../lib/icons.js"></script>
+  <script src="../lib/dialog.js"></script>
   <script src="../lib/api.js"></script>
   <script src="../lib/auth.js"></script>
   <script src="../lib/storage.js"></script>

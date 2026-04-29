@@ -7,7 +7,7 @@ if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
 
 class PopupController {
   constructor() {
-    this.currentTab = 'work';
+    this.currentTab = 'root';
     this.currentFolder = null;
     this.searchQuery = '';
     this.expanded = new Set();
@@ -32,11 +32,10 @@ class PopupController {
   hydrateIcons() { hydrateIcons(); }
 
   async loadCurrentView() {
-    const view = await storage.getCurrentView();
-    this.currentTab = (view.tabId && view.tabId !== 'all-links') ? view.tabId : 'work';
-    this.currentFolder = view.folderId || null;
-    this.expanded.add(`tab:${this.currentTab}`);
-    this.path = [{ tabId: this.currentTab, folderId: null }];
+    this.currentTab = 'root';
+    this.currentFolder = null;
+    this.path = [{ tabId: 'root', folderId: null }];
+    await storage.ensureDefaultRootFolders();
   }
 
   async saveCurrentView() {
@@ -58,6 +57,23 @@ class PopupController {
   // path = [{tabId,null},{tabId,folderId}] → that folder's column
   ensurePath() { if (!this.path) this.path = []; }
 
+  // If a column has exactly one folder and no path entry past it, auto-extend
+  // so the next column opens immediately. Loops until no further single-folder
+  // column remains.
+  async ensureAutoExpand() {
+    let safety = 0;
+    while (safety++ < 32 && this.path.length > 0) {
+      const last = this.path[this.path.length - 1];
+      const folders = (await storage.getFolders(last.tabId))
+        .filter(f => f.parentId === last.folderId);
+      if (folders.length === 1) {
+        this.path.push({ tabId: last.tabId, folderId: folders[0].id });
+      } else {
+        break;
+      }
+    }
+  }
+
   bindEvents() {
     // Sidebar view items
     document.querySelectorAll('.side-item[data-view]').forEach(btn => {
@@ -69,6 +85,10 @@ class PopupController {
     // Save custom link (modal action)
     document.getElementById('saveCustomLinkBtn').addEventListener('click', () => {
       this.saveCustomLink();
+    });
+
+    document.getElementById('sendShareFolderBtn')?.addEventListener('click', () => {
+      this.sendShareFolder();
     });
 
     // Create folder (modal action)
@@ -228,7 +248,7 @@ class PopupController {
       del.title = 'Delete';
       del.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (!confirm(`Delete project "${p.name}" and all its tasks?`)) return;
+        if (!await uiConfirm(`Delete project "${p.name}" and all its tasks?`)) return;
         await storage.deleteTodoProject(p.id);
         if (this.currentProjectId === p.id) this.currentProjectId = null;
         await this.renderTodo();
@@ -302,7 +322,7 @@ class PopupController {
     del.textContent = '🗑️';
     del.title = 'Delete status';
     del.addEventListener('click', async () => {
-      if (!confirm(`Delete status "${status.name}" and its tasks?`)) return;
+      if (!await uiConfirm(`Delete status "${status.name}" and its tasks?`)) return;
       await storage.deleteTodoStatus(projectId, status.id);
       await this.renderKanban();
     });
@@ -386,7 +406,7 @@ class PopupController {
     // Right-click to delete
     card.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
-      if (confirm(`Delete task "${task.title}"?`)) {
+      if (uiConfirm(`Delete task "${task.title}"?`)) {
         await storage.deleteTodoTask(projectId, task.id);
         await this.renderKanban();
       }
@@ -473,40 +493,13 @@ class PopupController {
 
   async render() {
     this.ensurePath();
+    if (this.path.length === 0) this.path = [{ tabId: 'root', folderId: null }];
+    await this.ensureAutoExpand();
     const container = document.getElementById('itemsContainer');
     const emptyState = document.getElementById('emptyState');
     container.innerHTML = '';
 
-    // Column 0: tabs (root folders)
-    const tabs = (await storage.getTabs()).filter(t => t.id !== 'all-links');
-    const col0 = document.createElement('div');
-    col0.className = 'tree-column';
-
-    // Action row uses currently-selected tab (or first tab) + root folderId
-    const ctxTabId = this.path[0]?.tabId || tabs[0]?.id || 'work';
-    col0.appendChild(this.makeActionRow(ctxTabId, null));
-
-    for (const tab of tabs) {
-      const selected = this.path[0]?.tabId === tab.id;
-      col0.appendChild(this.makeColRow({
-        label: tab.name,
-        icon: iconSvg('folder'),
-        isFolder: true,
-        selected,
-        hasChildren: true,
-        contextItem: { type: 'tab', tabId: tab.id, tab },
-        onClick: () => {
-          this.path = [{ tabId: tab.id, folderId: null }];
-          this.currentTab = tab.id;
-          this.currentFolder = null;
-          this.saveCurrentView();
-          this.render();
-        }
-      }));
-    }
-    container.appendChild(col0);
-
-    // Subsequent columns from path
+    // All columns built from path. path[0] is the (hidden) root tab's column.
     for (let i = 0; i < this.path.length; i++) {
       const node = this.path[i];
       const col = document.createElement('div');
@@ -543,8 +536,9 @@ class PopupController {
         }));
       }
       for (const l of renderedLinks) {
+        const labelText = (l.title && l.title.trim()) ? l.title : (l.url || 'Untitled');
         col.appendChild(this.makeColRow({
-          label: l.title,
+          label: labelText,
           icon: PlatformDetector.getIcon(l.platform),
           isFolder: false,
           contextItem: { type: 'link', tabId: node.tabId, link: l },
@@ -562,13 +556,7 @@ class PopupController {
       container.appendChild(col);
     }
 
-    if (tabs.length === 0) {
-      emptyState.style.display = 'block';
-      emptyState.querySelector('.empty-text').textContent = 'No tabs';
-      emptyState.querySelector('.empty-subtext').textContent = '';
-    } else {
-      emptyState.style.display = 'none';
-    }
+    emptyState.style.display = 'none';
 
     // Auto-scroll to right so newest column is visible
     container.scrollLeft = container.scrollWidth;
@@ -576,14 +564,16 @@ class PopupController {
     await this.updateTabCounts();
   }
 
-  makeActionRow(tabId, folderId) {
+  makeActionRow(tabId, folderId, isTabsColumn = false) {
     const row = document.createElement('div');
     row.className = 'col-action-row';
     const actions = [
       { icon: 'save', label: 'Save Current Tab', run: () => this.saveCurrentInto(tabId, folderId) },
       { icon: 'save-close', label: 'Save & Close Tab', run: () => this.saveCurrentAndClose(tabId, folderId) },
       { icon: 'link', label: 'Paste URL', run: () => this.openPasteAt(tabId, folderId) },
-      { icon: 'folder-plus', label: 'New Folder', run: () => this.openNewFolderAt(tabId, folderId) },
+      isTabsColumn
+        ? { icon: 'folder-plus', label: 'New Tab', run: () => this.createNewTab() }
+        : { icon: 'folder-plus', label: 'New Folder', run: () => this.openNewFolderAt(tabId, folderId) },
     ];
     for (const a of actions) {
       const btn = document.createElement('button');
@@ -631,14 +621,47 @@ class PopupController {
     this.currentTab = tabId;
     this.currentFolder = folderId;
     try {
-      const [active] = await browser.tabs.query({ active: true, currentWindow: true });
+      const tabsApi = (typeof browser !== 'undefined' && browser.tabs) ||
+                      (typeof chrome !== 'undefined' && chrome.tabs) || null;
+      let active = null;
+      if (tabsApi?.query) {
+        const result = await tabsApi.query({ active: true, currentWindow: true });
+        active = Array.isArray(result) ? result[0] : null;
+      }
       await this.saveCurrentTab();
-      if (active && active.id !== undefined) {
-        await browser.tabs.remove(active.id);
+      if (active && active.id !== undefined && tabsApi?.remove) {
+        await tabsApi.remove(active.id);
       }
     } catch (err) {
       console.error('LinkFlow: save & close failed', err);
     }
+  }
+
+  async createNewTab() {
+    const id = await storage.createTab('Untitled');
+    this.currentTab = id;
+    this.currentFolder = null;
+    this.path = [{ tabId: id, folderId: null }];
+    await this.saveCurrentView();
+    await this.render();
+    // Focus inline edit on the new tab row
+    const row = document.querySelector(`.col-row[data-tab-id="${id}"]`);
+    if (row) {
+      const labelEl = row.querySelector('.col-label');
+      if (labelEl) this.startInlineEdit(row, labelEl, { type: 'tab', tabId: id, tab: { id, name: 'Untitled' } });
+    }
+  }
+
+  async deleteTabConfirm(tabId, tabName) {
+    if (!await uiConfirm(`Delete tab "${tabName}" and all its links/folders?`)) return;
+    await storage.deleteTab(tabId);
+    if (this.currentTab === tabId) {
+      this.currentTab = 'work';
+      this.currentFolder = null;
+      this.path = [];
+    }
+    await this.saveCurrentView();
+    await this.render();
   }
 
   openPasteAt(tabId, folderId) {
@@ -653,7 +676,7 @@ class PopupController {
     modalManager.open('newFolderModal');
   }
 
-  makeColRow({ label, icon, isFolder, selected, hasChildren, onClick, contextItem }) {
+  makeColRow({ label, icon, isFolder, selected, onClick, contextItem }) {
     const row = document.createElement('div');
     row.className = 'col-row' + (selected ? ' selected' : '') + (isFolder ? ' is-folder' : ' is-link');
 
@@ -668,27 +691,10 @@ class PopupController {
     lbl.textContent = label;
     row.appendChild(lbl);
 
-    if (isFolder && hasChildren) {
-      const arrow = document.createElement('span');
-      arrow.className = 'col-arrow';
-      arrow.innerHTML = iconSvg('chevron');
-      row.appendChild(arrow);
-    }
-
     if (contextItem) {
       if (contextItem.type === 'link') {
-        const openBtn = document.createElement('button');
-        openBtn.className = 'tree-menu-btn';
-        openBtn.title = 'Open in new tab';
-        openBtn.innerHTML = iconSvg('external');
-        openBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.openLinkUrl(contextItem.link.url);
-        });
-        row.appendChild(openBtn);
-
         const copyBtn = document.createElement('button');
-        copyBtn.className = 'tree-menu-btn';
+        copyBtn.className = 'tree-menu-btn grad-btn';
         copyBtn.title = 'Copy URL';
         copyBtn.innerHTML = iconSvg('copy');
         copyBtn.addEventListener('click', async (e) => {
@@ -702,18 +708,8 @@ class PopupController {
         row.appendChild(copyBtn);
       }
 
-      const editBtn = document.createElement('button');
-      editBtn.className = 'tree-menu-btn';
-      editBtn.title = 'Edit';
-      editBtn.innerHTML = iconSvg('edit');
-      editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.startInlineEdit(row, lbl, contextItem);
-      });
-      row.appendChild(editBtn);
-
       const menuBtn = document.createElement('button');
-      menuBtn.className = 'tree-menu-btn';
+      menuBtn.className = 'tree-menu-btn grad-btn';
       menuBtn.title = 'More';
       menuBtn.innerHTML = iconSvg('more-vert');
       menuBtn.addEventListener('click', (e) => {
@@ -789,10 +785,14 @@ class PopupController {
     } else if (ctx.type === 'tab') {
       menu.innerHTML = `
         <button class="dropdown-item" data-action="rename">${iconSvg('edit')} Rename</button>
+        <button class="dropdown-item danger" data-action="delete-tab">${iconSvg('trash')} Delete tab</button>
       `;
     } else {
       menu.innerHTML = `
         <button class="dropdown-item" data-action="rename">${iconSvg('edit')} Rename</button>
+        <button class="dropdown-item" data-action="open-shallow">${iconSvg('external')} Open links (1 level)</button>
+        <button class="dropdown-item" data-action="open-deep">${iconSvg('layers')} Open all nested links</button>
+        <button class="dropdown-item" data-action="share">${iconSvg('share')} Share folder...</button>
         <button class="dropdown-item danger" data-action="delete">${iconSvg('trash')} Delete</button>
       `;
     }
@@ -818,6 +818,10 @@ class PopupController {
           else if (action === 'move' && ctx.type === 'link') this.showMoveModal(target);
           else if (action === 'delete') this.showDeleteModal(target, ctx.type);
           else if (action === 'properties' && ctx.type === 'link') this.showPropertiesModal(ctx.link);
+          else if (action === 'open-shallow' && ctx.type === 'folder') this.openFolderLinks(ctx.tabId, ctx.folder.id, false);
+          else if (action === 'open-deep' && ctx.type === 'folder') this.openFolderLinks(ctx.tabId, ctx.folder.id, true);
+          else if (action === 'share' && ctx.type === 'folder') this.showShareFolderModal(ctx.tabId, ctx.folder);
+          else if (action === 'delete-tab' && ctx.type === 'tab') this.deleteTabConfirm(ctx.tabId, ctx.tab.name);
         }
         menu.remove();
       });
@@ -843,12 +847,13 @@ class PopupController {
       const response = await browser.runtime.sendMessage({ type: 'GET_CURRENT_TAB' });
 
       if (!response || !response.url) {
-        alert('Could not get current tab information');
+        await uiAlert('Could not get current tab information');
         return;
       }
 
       const platform = PlatformDetector.detect(response.url);
-      const title = PlatformDetector.extractTitle(response.url, response.title);
+      const detectedTitle = PlatformDetector.extractTitle(response.url, response.title);
+      const title = (detectedTitle && detectedTitle.trim()) || (response.title && response.title.trim()) || response.url;
 
       await storage.createLink(this.currentTab, {
         title,
@@ -860,7 +865,7 @@ class PopupController {
       await this.render();
     } catch (err) {
       console.error('Error saving tab:', err);
-      alert('Failed to save tab');
+      await uiAlert('Failed to save tab: ' + (err?.message || err));
     }
   }
 
@@ -891,7 +896,7 @@ class PopupController {
       titleInput.value = '';
       await this.render();
     } catch (err) {
-      alert('Save URL failed: ' + (err.message || err));
+      await uiAlert('Save URL failed: ' + (err.message || err));
     }
   }
 
@@ -953,11 +958,135 @@ class PopupController {
       await storage.deleteLink(this.currentTab, item.id);
     } else if (type === 'folder') {
       await storage.deleteFolder(this.currentTab, item.id);
+      // If deleted folder lives in current path, truncate so we don't render a stale column.
+      const idx = (this.path || []).findIndex(p => p.folderId === item.id);
+      if (idx !== -1) {
+        this.path = this.path.slice(0, idx);
+        this.currentFolder = this.path[this.path.length - 1]?.folderId || null;
+      }
     }
 
     modalManager.close('confirmDeleteModal');
     this.tempDeleteContext = null;
     await this.render();
+  }
+
+  async openFolderLinks(tabId, folderId, deep) {
+    try {
+      const allLinks = await storage.getAllLinks(tabId);
+      const allFolders = await storage.getFolders(tabId);
+      let targetFolderIds;
+      if (deep) {
+        targetFolderIds = new Set([folderId]);
+        let frontier = [folderId];
+        while (frontier.length) {
+          const next = [];
+          for (const fid of frontier) {
+            const subs = allFolders.filter(f => f.parentId === fid).map(f => f.id);
+            subs.forEach(s => { if (!targetFolderIds.has(s)) { targetFolderIds.add(s); next.push(s); } });
+          }
+          frontier = next;
+        }
+      } else {
+        targetFolderIds = new Set([folderId]);
+      }
+      const links = allLinks.filter(l => targetFolderIds.has(l.folderId));
+      if (links.length === 0) { await uiAlert('No links to open.'); return; }
+      if (links.length > 20 && !await uiConfirm(`Open ${links.length} tabs?`)) return;
+      for (const l of links) this.openLinkUrl(l.url);
+    } catch (err) {
+      await uiAlert('Failed: ' + (err.message || err));
+    }
+  }
+
+  async showShareFolderModal(tabId, folder) {
+    this.shareCtx = { tabId, folderId: folder.id, folderName: folder.name };
+
+    const groupsList = document.getElementById('shareGroupsList');
+    const friendsList = document.getElementById('shareFriendsList');
+    document.getElementById('shareFolderTitle').textContent = `Share "${folder.name}"`;
+    groupsList.innerHTML = '<div class="empty-state-small">Loading…</div>';
+    friendsList.innerHTML = '<div class="empty-state-small">Loading…</div>';
+
+    modalManager.open('shareFolderModal');
+
+    try {
+      const [groupsRes, friendsRes] = await Promise.all([
+        api.authedFetch('/groups').catch(() => ({ groups: [] })),
+        api.authedFetch('/friends').catch(() => ({ friends: [] }))
+      ]);
+      this.renderShareList(groupsList, groupsRes.groups || [], 'group');
+      this.renderShareList(friendsList, friendsRes.friends || [], 'user');
+    } catch (err) {
+      groupsList.innerHTML = `<div class="empty-state-small">Could not load: ${err.message}</div>`;
+    }
+  }
+
+  renderShareList(wrap, items, kind) {
+    wrap.innerHTML = '';
+    if (items.length === 0) {
+      wrap.innerHTML = `<div class="empty-state-small">${kind === 'group' ? 'No groups' : 'No friends'}</div>`;
+      return;
+    }
+    for (const it of items) {
+      const lab = document.createElement('label');
+      lab.className = 'multi-select-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = it.id;
+      cb.dataset.kind = kind;
+      const span = document.createElement('span');
+      span.textContent = kind === 'group' ? it.name : `@${it.username}`;
+      lab.append(cb, span);
+      wrap.appendChild(lab);
+    }
+  }
+
+  async sendShareFolder() {
+    if (!this.shareCtx) return;
+    const groupIds = Array.from(document.querySelectorAll('#shareGroupsList input:checked')).map(c => c.value);
+    const userIds = Array.from(document.querySelectorAll('#shareFriendsList input:checked')).map(c => c.value);
+    if (groupIds.length === 0 && userIds.length === 0) { await uiAlert('Select at least one target.'); return; }
+
+    const allLinks = await storage.getAllLinks(this.shareCtx.tabId);
+    const folderLinks = allLinks.filter(l => l.folderId === this.shareCtx.folderId);
+    const payload = {
+      folderId: this.shareCtx.folderId,
+      links: folderLinks.map(l => ({ title: l.title, url: l.url, platform: l.platform }))
+    };
+
+    const note = document.getElementById('shareFolderNote').value.trim();
+
+    try {
+      if (groupIds.length) {
+        await api.authedFetch('/share', {
+          method: 'POST',
+          body: {
+            groupIds,
+            kind: 'folder',
+            title: this.shareCtx.folderName,
+            text: note || null,
+            payload
+          }
+        });
+      }
+      if (userIds.length) {
+        await api.authedFetch('/share', {
+          method: 'POST',
+          body: {
+            userIds,
+            kind: 'folder',
+            title: this.shareCtx.folderName,
+            text: note || null,
+            payload
+          }
+        });
+      }
+      modalManager.close('shareFolderModal');
+      await uiAlert('Folder shared.');
+    } catch (err) {
+      await uiAlert('Share failed: ' + (err.message || err));
+    }
   }
 
   async showPropertiesModal(link) {

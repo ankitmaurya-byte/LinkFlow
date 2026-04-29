@@ -244,12 +244,11 @@ class DashboardController {
         onOpen: (link) => {
           browser.tabs.create({ url: link.url });
         },
-        onRename: (link) => {
-          // TODO: Implement rename
-          alert('Rename feature - Coming soon!');
+        onRename: async (link) => {
+          await uiAlert('Rename feature - Coming soon!');
         },
-        onMove: (link) => {
-          alert('Move feature - Coming soon!');
+        onMove: async (link) => {
+          await uiAlert('Move feature - Coming soon!');
         },
         onDelete: (link) => {
           this.showDeleteModal(link);
@@ -308,7 +307,7 @@ class DashboardController {
       const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 
       if (!tab || !tab.url) {
-        alert('Could not get current tab');
+        await uiAlert('Could not get current tab');
         return;
       }
 
@@ -333,7 +332,7 @@ class DashboardController {
       }, 2000);
     } catch (err) {
       console.error('Error saving tab:', err);
-      alert('Failed to save tab');
+      await uiAlert('Failed to save tab');
     }
   }
 
@@ -374,7 +373,7 @@ class DashboardController {
     } catch (err) {
       console.error('Import failed:', err);
       btn.textContent = '✗ Import failed';
-      alert('Failed to import: ' + err.message);
+      await uiAlert('Failed to import: ' + err.message);
     } finally {
       setTimeout(() => {
         btn.replaceChildren(...originalNodes);

@@ -1,11 +1,8 @@
 // Storage layer — backend-backed.
 // Local cache invalidated on mutation; server is source of truth.
 
-const DEFAULT_TABS = [
-  { id: 'work', name: 'Work' },
-  { id: 'personal', name: 'Personal' },
-  { id: 'inspiration', name: 'Inspiration' }
-];
+const ROOT_TAB = { id: 'root', name: 'Root' };
+const DEFAULT_ROOT_FOLDERS = ['Work', 'Personal', 'Inspiration'];
 
 class StorageManager {
   constructor() {
@@ -59,23 +56,34 @@ class StorageManager {
     };
   }
 
-  // === TABS ===
+  // === TABS (single hidden root) ===
   async getTabs() {
-    const { tabNameOverrides } = await this._get(['tabNameOverrides']);
-    const overrides = tabNameOverrides || {};
-    return DEFAULT_TABS.map(t => ({ ...t, name: overrides[t.id] || t.name }));
+    return [ROOT_TAB ];
   }
 
-  async renameTab(tabId, newName) {
-    const { tabNameOverrides } = await this._get(['tabNameOverrides']);
-    const overrides = tabNameOverrides || {};
-    overrides[tabId] = newName;
-    await this._set({ tabNameOverrides: overrides });
+  async ensureDefaultRootFolders() {
+    if (this._seedAttempted) return;
+    this._seedAttempted = true;
+    try {
+      const all = await this._fetchTabBookmarks(ROOT_TAB.id);
+      const rootFolders = all.filter(b => b.kind === 'folder' && !b.parentId);
+      if (rootFolders.length > 0) return;
+      const { rootSeeded } = await this._get(['rootSeeded']);
+      if (rootSeeded) return;
+      for (const name of DEFAULT_ROOT_FOLDERS) {
+        try {
+          await api.authedFetch('/bookmarks', {
+            method: 'POST',
+            body: { tab: ROOT_TAB.id, parentId: null, kind: 'folder', name }
+          });
+        } catch (_) {}
+      }
+      await this._set({ rootSeeded: true });
+      this.invalidate();
+    } catch (_) {}
   }
 
-  async updateTabCount(_tabId, _count) {
-    /* server-driven; counts derived from queries */
-  }
+  async updateTabCount(_tabId, _count) { /* unused now */ }
 
   // === FOLDERS ===
   async getFolders(tabId) {

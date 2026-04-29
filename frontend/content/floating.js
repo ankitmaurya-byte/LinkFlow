@@ -92,6 +92,10 @@
     .bubble.dragging {
       cursor: grabbing;
     }
+    .bubble.locked {
+      outline: 2px solid #181d26;
+      outline-offset: 2px;
+    }
     .panel {
       width: 720px;
       height: 560px;
@@ -136,6 +140,7 @@
 
   let closeTimer = null;
   let dragLock = false;
+  let userLock = false;
   const PANEL_W = 720;
   const PANEL_H = 560;
   const GAP = 0;
@@ -206,7 +211,7 @@
     ensureFrameLoaded();
   };
   const schedClose = () => {
-    if (dragLock) return;
+    if (dragLock || userLock) return;
     if (closeTimer) clearTimeout(closeTimer);
     closeTimer = setTimeout(() => wrap.classList.remove('open'), 350);
   };
@@ -272,6 +277,18 @@
   bubble.addEventListener('mouseenter', () => { if (!dragState) openPanel(); });
   panel.addEventListener('mouseenter', openPanel);
   wrap.addEventListener('mouseleave', schedClose);
+
+  // Double-click bubble toggles lock — while locked, mouseleave never closes panel.
+  bubble.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    userLock = !userLock;
+    bubble.classList.toggle('locked', userLock);
+    if (userLock) {
+      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+      openPanel();
+    }
+  });
 
   loadSavedPosition();
 

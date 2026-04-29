@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkFlow",
-  "version": "1.0.2",
+  "version": "1.0.4",
     "browser_specific_settings": {
     "gecko": {
       "id": "ankitmaurya2989@gmail.com",

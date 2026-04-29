@@ -35,6 +35,8 @@ const ICONS = {
   briefcase: `<svg ${SVG_ATTR}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>`,
   bulb: `<svg ${SVG_ATTR}><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 00-4 12.73c.7.6 1 1.5 1 2.27v0h6v0c0-.77.3-1.67 1-2.27A7 7 0 0012 2z"/></svg>`,
   inbox: `<svg ${SVG_ATTR}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>`,
+  clipboard: `<svg ${SVG_ATTR}><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><polyline points="9 14 11 16 15 12"/></svg>`,
+  layers: `<svg ${SVG_ATTR}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
 };
 
 function iconSvg(name) { return ICONS[name] || ''; }

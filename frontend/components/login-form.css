@@ -18,7 +18,7 @@ body[data-authed="false"] > *:not(.login-overlay) {
 
 .login-card {
   background: var(--bg-primary, #fff);
-  border-radius: var(--radius-lg, 16px);
+  border-radius: 0;
   box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.15));
   width: 100%;
   max-width: 360px;
@@ -59,7 +59,7 @@ body[data-authed="false"] > *:not(.login-overlay) {
   gap: var(--space-sm, 8px);
   background: var(--bg-secondary, #f9fafb);
   padding: 4px;
-  border-radius: var(--radius, 8px);
+  border-radius: 0;
 }
 
 .login-tab {
@@ -67,7 +67,7 @@ body[data-authed="false"] > *:not(.login-overlay) {
   background: transparent;
   border: none;
   padding: var(--space-sm, 8px) var(--space-md, 12px);
-  border-radius: var(--radius-sm, 4px);
+  border-radius: 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary, #6b7280);
@@ -97,7 +97,7 @@ body[data-authed="false"] > *:not(.login-overlay) {
   padding: var(--space-sm, 8px) var(--space-md, 12px);
   background: #fef2f2;
   color: var(--danger, #ef4444);
-  border-radius: var(--radius, 8px);
+  border-radius: 0;
   font-size: 13px;
 }
 
@@ -120,7 +120,7 @@ body[data-authed="false"] > *:not(.login-overlay) {
 .login-help code {
   background: var(--bg-secondary, #f9fafb);
   padding: 1px 4px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: 0;
   font-size: 11px;
 }
 
@@ -129,7 +129,7 @@ body[data-authed="false"] > *:not(.login-overlay) {
   background: transparent;
   border: 1px solid var(--border, #e5e7eb);
   padding: 4px 10px;
-  border-radius: var(--radius, 8px);
+  border-radius: 0;
   font-size: 12px;
   color: var(--text-secondary, #6b7280);
   cursor: pointer;
