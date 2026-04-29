@@ -57,16 +57,16 @@ class PopupController {
   // path = [{tabId,null},{tabId,folderId}] → that folder's column
   ensurePath() { if (!this.path) this.path = []; }
 
-  // If a column has exactly one folder and no path entry past it, auto-extend
-  // so the next column opens immediately. Loops until no further single-folder
-  // column remains.
+  // If the last path column has at least one folder and nothing past it,
+  // auto-extend by selecting the first folder. Loops to drill into the
+  // leftmost branch by default.
   async ensureAutoExpand() {
     let safety = 0;
     while (safety++ < 32 && this.path.length > 0) {
       const last = this.path[this.path.length - 1];
       const folders = (await storage.getFolders(last.tabId))
         .filter(f => f.parentId === last.folderId);
-      if (folders.length === 1) {
+      if (folders.length >= 1) {
         this.path.push({ tabId: last.tabId, folderId: folders[0].id });
       } else {
         break;
@@ -712,9 +712,20 @@ class PopupController {
       menuBtn.className = 'tree-menu-btn grad-btn';
       menuBtn.title = 'More';
       menuBtn.innerHTML = iconSvg('more-vert');
+      menuBtn.addEventListener('mouseenter', () => {
+        this.showTreeContextMenu(menuBtn, contextItem);
+      });
+      menuBtn.addEventListener('mouseleave', () => {
+        this.scheduleMenuClose(menuBtn);
+      });
       menuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.showTreeContextMenu(menuBtn, contextItem);
+        if (menuBtn._activeMenu) {
+          menuBtn._activeMenu.remove();
+          menuBtn._activeMenu = null;
+        } else {
+          this.showTreeContextMenu(menuBtn, contextItem);
+        }
       });
       row.appendChild(menuBtn);
 
@@ -772,15 +783,28 @@ class PopupController {
     input.addEventListener('blur', () => finish(true));
   }
 
+  scheduleMenuClose(button) {
+    if (!button._activeMenu) return;
+    if (button._closeTimer) clearTimeout(button._closeTimer);
+    button._closeTimer = setTimeout(() => {
+      if (button._activeMenu) {
+        button._activeMenu.remove();
+        button._activeMenu = null;
+      }
+    }, 200);
+  }
+
   showTreeContextMenu(button, ctx) {
+    if (button._activeMenu) return; // already open
     document.querySelectorAll('.dropdown-menu').forEach(m => m.remove());
     const menu = document.createElement('div');
     menu.className = 'dropdown-menu';
     if (ctx.type === 'link') {
       menu.innerHTML = `
+        <button class="dropdown-item" data-action="rename">${iconSvg('edit')} Rename</button>
         <button class="dropdown-item" data-action="move">${iconSvg('move')} Move to...</button>
-        <button class="dropdown-item danger" data-action="delete">${iconSvg('trash')} Delete</button>
         <button class="dropdown-item" data-action="properties">${iconSvg('info')} Properties</button>
+        <button class="dropdown-item danger" data-action="delete">${iconSvg('trash')} Delete</button>
       `;
     } else if (ctx.type === 'tab') {
       menu.innerHTML = `
@@ -797,18 +821,25 @@ class PopupController {
       `;
     }
     document.body.appendChild(menu);
+    button._activeMenu = menu;
     const rect = button.getBoundingClientRect();
     menu.style.position = 'fixed';
     menu.style.top = `${rect.bottom + 4}px`;
-    menu.style.left = `${rect.left - 120}px`;
+    menu.style.left = `${Math.max(8, rect.right - 170)}px`;
     menu.style.zIndex = '2000';
+
+    // Hover bridge: keep menu open while cursor over menu, close on leave.
+    menu.addEventListener('mouseenter', () => {
+      if (button._closeTimer) { clearTimeout(button._closeTimer); button._closeTimer = null; }
+    });
+    menu.addEventListener('mouseleave', () => this.scheduleMenuClose(button));
 
     menu.addEventListener('click', (e) => e.stopPropagation());
     menu.querySelectorAll('.dropdown-item').forEach(item => {
       item.addEventListener('click', () => {
         const action = item.dataset.action;
         this.currentTab = ctx.tabId;
-        if (action === 'rename' && ctx.type === 'tab') {
+        if (action === 'rename' && (ctx.type === 'tab' || ctx.type === 'link' || ctx.type === 'folder')) {
           const row = button.closest('.col-row');
           const labelEl = row?.querySelector('.col-label');
           if (row && labelEl) this.startInlineEdit(row, labelEl, ctx);
@@ -824,12 +855,14 @@ class PopupController {
           else if (action === 'delete-tab' && ctx.type === 'tab') this.deleteTabConfirm(ctx.tabId, ctx.tab.name);
         }
         menu.remove();
+        button._activeMenu = null;
       });
     });
     setTimeout(() => {
       const close = (e) => {
         if (!menu.contains(e.target) && e.target !== button) {
           menu.remove();
+          button._activeMenu = null;
           document.removeEventListener('click', close);
         }
       };

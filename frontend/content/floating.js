@@ -141,6 +141,7 @@
   let closeTimer = null;
   let dragLock = false;
   let userLock = false;
+  let dismissedByClick = false;
   const PANEL_W = 720;
   const PANEL_H = 560;
   const GAP = 0;
@@ -211,7 +212,7 @@
     ensureFrameLoaded();
   };
   const schedClose = () => {
-    if (dragLock || userLock) return;
+    if (dragLock || userLock || dragState) return;
     if (closeTimer) clearTimeout(closeTimer);
     closeTimer = setTimeout(() => wrap.classList.remove('open'), 350);
   };
@@ -251,11 +252,12 @@
     if (!dragState.moved && Math.abs(dx) + Math.abs(dy) > 4) {
       dragState.moved = true;
       bubble.classList.add('dragging');
-      wrap.classList.remove('open');
+      // Keep panel open while dragging so it follows the bubble.
     }
     if (dragState.moved) {
       const next = clampToViewport(dragState.origX + dx, dragState.origY + dy);
       applyHostPosition(next);
+      if (wrap.classList.contains('open')) positionPanel();
     }
   });
   const endDrag = (e) => {
@@ -268,15 +270,32 @@
       applyHostPosition(clamped);
       savePosition(clamped);
     } else {
-      openPanel();
+      // Click toggles panel. If in lock mode → unlock + close.
+      if (userLock) {
+        userLock = false;
+        bubble.classList.remove('locked');
+        wrap.classList.remove('open');
+        dismissedByClick = true;
+      } else if (wrap.classList.contains('open')) {
+        wrap.classList.remove('open');
+        dismissedByClick = true;
+      } else {
+        dismissedByClick = false;
+        openPanel();
+      }
     }
   };
   bubble.addEventListener('pointerup', endDrag);
   bubble.addEventListener('pointercancel', endDrag);
 
-  bubble.addEventListener('mouseenter', () => { if (!dragState) openPanel(); });
+  bubble.addEventListener('mouseenter', () => {
+    if (!dragState && !dismissedByClick) openPanel();
+  });
   panel.addEventListener('mouseenter', openPanel);
-  wrap.addEventListener('mouseleave', schedClose);
+  wrap.addEventListener('mouseleave', () => {
+    dismissedByClick = false;
+    schedClose();
+  });
 
   // Double-click bubble toggles lock — while locked, mouseleave never closes panel.
   bubble.addEventListener('dblclick', (e) => {
