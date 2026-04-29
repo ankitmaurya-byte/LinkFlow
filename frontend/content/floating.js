@@ -8,7 +8,8 @@
   const browserApi = (typeof browser !== 'undefined') ? browser : chrome;
 
   const STORAGE_KEY = 'floatingPosition';
-  const BUBBLE = 48;
+  const BUBBLE_W = 100;
+  const BUBBLE_H = 79;
   let currentPos = { x: 16, y: 16, anchor: 'tl' }; // anchor: which corner to derive from
   let panelSide = 'right'; // 'right' | 'left' | 'top' | 'bottom' depending on bubble pos
 
@@ -30,8 +31,8 @@
   function clampToViewport(x, y) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const cx = Math.max(0, Math.min(x, vw - BUBBLE));
-    const cy = Math.max(0, Math.min(y, vh - BUBBLE));
+    const cx = Math.max(0, Math.min(x, vw - BUBBLE_W));
+    const cy = Math.max(0, Math.min(y, vh - BUBBLE_H));
     return { x: cx, y: cy };
   }
 
@@ -60,8 +61,8 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #111827;
       position: relative;
-      width: 48px;
-      height: 48px;
+      width: 100px;
+      height: 79px;
     }
     .panel {
       position: fixed;
@@ -75,27 +76,22 @@
     .bubble {
       position: absolute;
       inset: 0;
-      width: 48px;
-      height: 48px;
-      border-radius: 9999px;
-      background: #181d26;
-      box-shadow: 0 1px 2px rgba(24, 29, 38, 0.1), 0 0 0 1px #dddddd;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ffffff;
-      font-size: 20px;
+      width: 100px;
+      height: 79px;
+      background: transparent;
+      display: block;
       cursor: grab;
       user-select: none;
       touch-action: none;
-      transition: background 0.15s, box-shadow 0.15s;
     }
-    .bubble:hover {
-      background: #0d1218;
+    .bubble img {
+      width: 100px;
+      height: 79px;
+      display: block;
+      pointer-events: none;
     }
     .bubble.dragging {
       cursor: grabbing;
-      background: #0d1218;
     }
     .panel {
       width: 720px;
@@ -129,7 +125,11 @@
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   bubble.title = 'LinkFlow';
-  bubble.textContent = '⬡';
+  const bubbleIcon = document.createElement('img');
+  bubbleIcon.src = browserApi.runtime.getURL('icons/float.svg');
+  bubbleIcon.alt = 'LinkFlow';
+  bubbleIcon.draggable = false;
+  bubble.appendChild(bubbleIcon);
 
   wrap.append(panel, bubble);
   root.appendChild(wrap);
@@ -158,25 +158,23 @@
 
     // Candidates relative to bubble, in priority order.
     const candidates = [
-      { x: bx + BUBBLE + GAP,           y: by },                       // right of bubble
-      { x: bx - GAP - pw,               y: by },                       // left of bubble
-      { x: bx,                          y: by + BUBBLE + GAP },        // below bubble
-      { x: bx,                          y: by - GAP - ph },            // above bubble
-      { x: bx + BUBBLE + GAP,           y: by + BUBBLE - ph },         // right, aligned bottom
-      { x: bx - GAP - pw,               y: by + BUBBLE - ph },         // left, aligned bottom
+      { x: bx + BUBBLE_W + GAP,         y: by },                         // right of bubble
+      { x: bx - GAP - pw,               y: by },                         // left of bubble
+      { x: bx,                          y: by + BUBBLE_H + GAP },        // below bubble
+      { x: bx,                          y: by - GAP - ph },              // above bubble
+      { x: bx + BUBBLE_W + GAP,         y: by + BUBBLE_H - ph },         // right, aligned bottom
+      { x: bx - GAP - pw,               y: by + BUBBLE_H - ph },         // left, aligned bottom
     ];
 
     const fitsViewport = (c) => c.x >= 0 && c.y >= 0 && c.x + pw <= vw && c.y + ph <= vh;
     let chosen = candidates.find(fitsViewport);
 
     if (!chosen) {
-      // No clean fit — dock panel adjacent to whichever side of bubble has most room
-      // so the bubble always sits on panel's outer boundary, never overlapping it.
       const sides = [
         { side: 'left',   space: bx },
-        { side: 'right',  space: vw - (bx + BUBBLE) },
+        { side: 'right',  space: vw - (bx + BUBBLE_W) },
         { side: 'top',    space: by },
-        { side: 'bottom', space: vh - (by + BUBBLE) }
+        { side: 'bottom', space: vh - (by + BUBBLE_H) }
       ].sort((a, b) => b.space - a.space);
       const best = sides[0];
       let cx, cy;
@@ -184,14 +182,14 @@
         cx = bx - pw;
         cy = Math.max(0, Math.min(by, vh - ph));
       } else if (best.side === 'right') {
-        cx = bx + BUBBLE;
+        cx = bx + BUBBLE_W;
         cy = Math.max(0, Math.min(by, vh - ph));
       } else if (best.side === 'top') {
         cx = Math.max(0, Math.min(bx, vw - pw));
         cy = by - ph;
       } else {
         cx = Math.max(0, Math.min(bx, vw - pw));
-        cy = by + BUBBLE;
+        cy = by + BUBBLE_H;
       }
       chosen = { x: cx, y: cy };
     }
