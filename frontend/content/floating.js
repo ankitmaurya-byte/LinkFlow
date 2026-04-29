@@ -11,7 +11,6 @@
   const BUBBLE_W = 100;
   const BUBBLE_H = 79;
   let currentPos = { x: 16, y: 16, anchor: 'tl' }; // anchor: which corner to derive from
-  let panelSide = 'right'; // 'right' | 'left' | 'top' | 'bottom' depending on bubble pos
 
   const host = document.createElement('div');
   host.id = 'linkflow-floating-host';
@@ -56,7 +55,7 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    :host, * { box-sizing: border-box; }
+    :host, * { box-sizing: border-box; border-radius: 0 !important; }
     .wrap {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #111827;

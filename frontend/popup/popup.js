@@ -1,5 +1,10 @@
 // Main Popup Controller
 
+if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
+  // eslint-disable-next-line no-global-assign
+  window.browser = chrome;
+}
+
 class PopupController {
   constructor() {
     this.currentTab = 'work';
@@ -18,10 +23,13 @@ class PopupController {
 
   async init() {
     await this.loadCurrentView();
+    this.hydrateIcons();
     this.bindEvents();
     document.querySelector('.side-item[data-view="links"]')?.classList.add('active');
     await this.render();
   }
+
+  hydrateIcons() { hydrateIcons(); }
 
   async loadCurrentView() {
     const view = await storage.getCurrentView();
@@ -473,14 +481,20 @@ class PopupController {
     const tabs = (await storage.getTabs()).filter(t => t.id !== 'all-links');
     const col0 = document.createElement('div');
     col0.className = 'tree-column';
+
+    // Action row uses currently-selected tab (or first tab) + root folderId
+    const ctxTabId = this.path[0]?.tabId || tabs[0]?.id || 'work';
+    col0.appendChild(this.makeActionRow(ctxTabId, null));
+
     for (const tab of tabs) {
       const selected = this.path[0]?.tabId === tab.id;
       col0.appendChild(this.makeColRow({
         label: tab.name,
-        icon: '📁',
+        icon: iconSvg('folder'),
         isFolder: true,
         selected,
         hasChildren: true,
+        contextItem: { type: 'tab', tabId: tab.id, tab },
         onClick: () => {
           this.path = [{ tabId: tab.id, folderId: null }];
           this.currentTab = tab.id;
@@ -514,7 +528,7 @@ class PopupController {
           (await storage.getLinks(node.tabId, f.id)).length > 0;
         col.appendChild(this.makeColRow({
           label: f.name,
-          icon: '📁',
+          icon: iconSvg('folder'),
           isFolder: true,
           selected: sel,
           hasChildren: hasKids,
@@ -534,7 +548,7 @@ class PopupController {
           icon: PlatformDetector.getIcon(l.platform),
           isFolder: false,
           contextItem: { type: 'link', tabId: node.tabId, link: l },
-          onClick: () => browser.tabs.create({ url: l.url })
+          onClick: () => this.openLinkUrl(l.url)
         }));
       }
 
@@ -566,9 +580,10 @@ class PopupController {
     const row = document.createElement('div');
     row.className = 'col-action-row';
     const actions = [
-      { icon: '💾', label: 'Save Current Tab', run: () => this.saveCurrentInto(tabId, folderId) },
-      { icon: '🔗', label: 'Paste URL', run: () => this.openPasteAt(tabId, folderId) },
-      { icon: '📁', label: 'New Folder', run: () => this.openNewFolderAt(tabId, folderId) },
+      { icon: 'save', label: 'Save Current Tab', run: () => this.saveCurrentInto(tabId, folderId) },
+      { icon: 'save-close', label: 'Save & Close Tab', run: () => this.saveCurrentAndClose(tabId, folderId) },
+      { icon: 'link', label: 'Paste URL', run: () => this.openPasteAt(tabId, folderId) },
+      { icon: 'folder-plus', label: 'New Folder', run: () => this.openNewFolderAt(tabId, folderId) },
     ];
     for (const a of actions) {
       const btn = document.createElement('button');
@@ -576,7 +591,7 @@ class PopupController {
       btn.title = a.label;
       const ic = document.createElement('span');
       ic.className = 'col-action-icon';
-      ic.textContent = a.icon;
+      ic.innerHTML = iconSvg(a.icon);
       const lbl = document.createElement('span');
       lbl.className = 'col-action-label';
       lbl.textContent = a.label;
@@ -587,10 +602,43 @@ class PopupController {
     return row;
   }
 
+  openLinkUrl(url) {
+    if (!url) return;
+    let safe = url;
+    if (!/^[a-z]+:\/\//i.test(safe)) safe = 'https://' + safe;
+    try {
+      if (typeof browser !== 'undefined' && browser.tabs?.create) {
+        browser.tabs.create({ url: safe });
+        return;
+      }
+    } catch (_) {}
+    try {
+      if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url: safe });
+        return;
+      }
+    } catch (_) {}
+    window.open(safe, '_blank', 'noopener');
+  }
+
   saveCurrentInto(tabId, folderId) {
     this.currentTab = tabId;
     this.currentFolder = folderId;
     this.saveCurrentTab();
+  }
+
+  async saveCurrentAndClose(tabId, folderId) {
+    this.currentTab = tabId;
+    this.currentFolder = folderId;
+    try {
+      const [active] = await browser.tabs.query({ active: true, currentWindow: true });
+      await this.saveCurrentTab();
+      if (active && active.id !== undefined) {
+        await browser.tabs.remove(active.id);
+      }
+    } catch (err) {
+      console.error('LinkFlow: save & close failed', err);
+    }
   }
 
   openPasteAt(tabId, folderId) {
@@ -611,7 +659,8 @@ class PopupController {
 
     const ic = document.createElement('span');
     ic.className = 'col-icon';
-    ic.textContent = icon;
+    if (typeof icon === 'string' && icon.trim().startsWith('<')) ic.innerHTML = icon;
+    else ic.textContent = icon;
     row.appendChild(ic);
 
     const lbl = document.createElement('span');
@@ -622,15 +671,41 @@ class PopupController {
     if (isFolder && hasChildren) {
       const arrow = document.createElement('span');
       arrow.className = 'col-arrow';
-      arrow.textContent = '›';
+      arrow.innerHTML = iconSvg('chevron');
       row.appendChild(arrow);
     }
 
     if (contextItem) {
+      if (contextItem.type === 'link') {
+        const openBtn = document.createElement('button');
+        openBtn.className = 'tree-menu-btn';
+        openBtn.title = 'Open in new tab';
+        openBtn.innerHTML = iconSvg('external');
+        openBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.openLinkUrl(contextItem.link.url);
+        });
+        row.appendChild(openBtn);
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'tree-menu-btn';
+        copyBtn.title = 'Copy URL';
+        copyBtn.innerHTML = iconSvg('copy');
+        copyBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          try {
+            await navigator.clipboard.writeText(contextItem.link.url);
+            copyBtn.innerHTML = iconSvg('check');
+            setTimeout(() => { copyBtn.innerHTML = iconSvg('copy'); }, 1000);
+          } catch (_) {}
+        });
+        row.appendChild(copyBtn);
+      }
+
       const editBtn = document.createElement('button');
       editBtn.className = 'tree-menu-btn';
       editBtn.title = 'Edit';
-      editBtn.textContent = '✏️';
+      editBtn.innerHTML = iconSvg('edit');
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.startInlineEdit(row, lbl, contextItem);
@@ -639,7 +714,8 @@ class PopupController {
 
       const menuBtn = document.createElement('button');
       menuBtn.className = 'tree-menu-btn';
-      menuBtn.textContent = '⋮';
+      menuBtn.title = 'More';
+      menuBtn.innerHTML = iconSvg('more-vert');
       menuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.showTreeContextMenu(menuBtn, contextItem);
@@ -660,8 +736,10 @@ class PopupController {
 
   startInlineEdit(row, labelEl, ctx) {
     if (row.querySelector('.col-label-input')) return;
-    const target = ctx.type === 'link' ? ctx.link : ctx.folder;
-    const oldName = ctx.type === 'link' ? target.title : target.name;
+    let target, oldName;
+    if (ctx.type === 'link') { target = ctx.link; oldName = target.title; }
+    else if (ctx.type === 'folder') { target = ctx.folder; oldName = target.name; }
+    else if (ctx.type === 'tab') { target = ctx.tab; oldName = target.name; }
     const input = document.createElement('input');
     input.className = 'col-label-input';
     input.type = 'text';
@@ -678,8 +756,10 @@ class PopupController {
       if (commit && newName && newName !== oldName) {
         if (ctx.type === 'link') {
           await storage.updateLink(ctx.tabId, target.id, { title: newName });
-        } else {
+        } else if (ctx.type === 'folder') {
           await storage.renameFolder(ctx.tabId, target.id, newName);
+        } else if (ctx.type === 'tab') {
+          await storage.renameTab(ctx.tabId, newName);
         }
         await this.render();
       } else {
@@ -702,14 +782,18 @@ class PopupController {
     menu.className = 'dropdown-menu';
     if (ctx.type === 'link') {
       menu.innerHTML = `
-        <button class="dropdown-item" data-action="rename">✏️ Rename</button>
-        <button class="dropdown-item" data-action="move">📁 Move to...</button>
-        <button class="dropdown-item danger" data-action="delete">🗑️ Delete</button>
+        <button class="dropdown-item" data-action="move">${iconSvg('move')} Move to...</button>
+        <button class="dropdown-item danger" data-action="delete">${iconSvg('trash')} Delete</button>
+        <button class="dropdown-item" data-action="properties">${iconSvg('info')} Properties</button>
+      `;
+    } else if (ctx.type === 'tab') {
+      menu.innerHTML = `
+        <button class="dropdown-item" data-action="rename">${iconSvg('edit')} Rename</button>
       `;
     } else {
       menu.innerHTML = `
-        <button class="dropdown-item" data-action="rename">✏️ Rename</button>
-        <button class="dropdown-item danger" data-action="delete">🗑️ Delete</button>
+        <button class="dropdown-item" data-action="rename">${iconSvg('edit')} Rename</button>
+        <button class="dropdown-item danger" data-action="delete">${iconSvg('trash')} Delete</button>
       `;
     }
     document.body.appendChild(menu);
@@ -723,11 +807,18 @@ class PopupController {
     menu.querySelectorAll('.dropdown-item').forEach(item => {
       item.addEventListener('click', () => {
         const action = item.dataset.action;
-        const target = ctx.type === 'link' ? ctx.link : ctx.folder;
         this.currentTab = ctx.tabId;
-        if (action === 'rename') this.showRenameModal(target);
-        else if (action === 'move' && ctx.type === 'link') this.showMoveModal(target);
-        else if (action === 'delete') this.showDeleteModal(target, ctx.type);
+        if (action === 'rename' && ctx.type === 'tab') {
+          const row = button.closest('.col-row');
+          const labelEl = row?.querySelector('.col-label');
+          if (row && labelEl) this.startInlineEdit(row, labelEl, ctx);
+        } else {
+          const target = ctx.type === 'link' ? ctx.link : ctx.folder;
+          if (action === 'rename') this.showRenameModal(target);
+          else if (action === 'move' && ctx.type === 'link') this.showMoveModal(target);
+          else if (action === 'delete') this.showDeleteModal(target, ctx.type);
+          else if (action === 'properties' && ctx.type === 'link') this.showPropertiesModal(ctx.link);
+        }
         menu.remove();
       });
     });
@@ -777,24 +868,31 @@ class PopupController {
     const urlInput = document.getElementById('customUrl');
     const titleInput = document.getElementById('customTitle');
 
-    const url = urlInput.value.trim();
+    let url = urlInput.value.trim();
     if (!url) {
       urlInput.focus();
       return;
     }
+    // Auto-prefix protocol if missing so backend + browser.tabs.create both accept it.
+    if (!/^[a-z]+:\/\//i.test(url)) url = 'https://' + url;
 
     const platform = PlatformDetector.detect(url);
     const title = titleInput.value.trim() || PlatformDetector.extractTitle(url);
 
-    await storage.createLink(this.currentTab, {
-      title,
-      url,
-      platform,
-      folderId: this.currentFolder
-    });
-
-    modalManager.close('pasteUrlModal');
-    await this.render();
+    try {
+      await storage.createLink(this.currentTab, {
+        title,
+        url,
+        platform,
+        folderId: this.currentFolder
+      });
+      modalManager.close('pasteUrlModal');
+      urlInput.value = '';
+      titleInput.value = '';
+      await this.render();
+    } catch (err) {
+      alert('Save URL failed: ' + (err.message || err));
+    }
   }
 
   async createFolder() {
@@ -860,6 +958,43 @@ class PopupController {
     modalManager.close('confirmDeleteModal');
     this.tempDeleteContext = null;
     await this.render();
+  }
+
+  async showPropertiesModal(link) {
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+    set('propName', link.title);
+    set('propUrl', link.url);
+    set('propPlatform', link.platform);
+    set('propTab', link.tabId);
+    let folderName = 'Root';
+    if (link.folderId) {
+      try {
+        const folders = await storage.getFolders(link.tabId);
+        const f = folders.find(f => f.id === link.folderId);
+        folderName = f ? f.name : link.folderId;
+      } catch (_) { folderName = link.folderId; }
+    }
+    set('propFolder', folderName);
+    set('propCreated', link.createdAt ? new Date(link.createdAt).toLocaleString() : '—');
+    set('propId', link.id);
+
+    const openBtn = document.getElementById('propOpenBtn');
+    const copyBtn = document.getElementById('propCopyUrlBtn');
+    const newOpen = openBtn.cloneNode(true);
+    const newCopy = copyBtn.cloneNode(true);
+    openBtn.replaceWith(newOpen);
+    copyBtn.replaceWith(newCopy);
+    newOpen.addEventListener('click', () => this.openLinkUrl(link.url));
+    newCopy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(link.url);
+        const old = newCopy.textContent;
+        newCopy.textContent = '✓ Copied';
+        setTimeout(() => { newCopy.textContent = old; }, 1000);
+      } catch (_) {}
+    });
+
+    modalManager.open('propertiesModal');
   }
 
   async showMoveModal(link) {

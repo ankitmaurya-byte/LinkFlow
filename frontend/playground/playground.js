@@ -10,6 +10,7 @@ class PlaygroundController {
 
   async init() {
     this.applyEmbedMode();
+    if (typeof hydrateIcons === 'function') hydrateIcons();
     this.bindEvents();
     await this.switchView('friends');
   }
@@ -288,7 +289,7 @@ class PlaygroundController {
           body.appendChild(note);
         }
       } else if (m.kind === 'folder') {
-        body.textContent = `📁 Folder: ${m.title || ''}`;
+        body.textContent = `Folder: ${m.title || ''}`;
         if (m.payload && Array.isArray(m.payload.links)) {
           const ul = document.createElement('ul');
           ul.style.marginTop = '6px';
@@ -309,7 +310,7 @@ class PlaygroundController {
         a.href = m.url || '#';
         a.target = '_blank';
         a.rel = 'noopener';
-        a.textContent = `🔖 ${m.title || m.url || 'Bookmark'}`;
+        a.textContent = `${m.title || m.url || 'Bookmark'}`;
         body.appendChild(a);
       }
       const ts = document.createElement('div');
@@ -370,7 +371,7 @@ class PlaygroundController {
       cb.value = g.id;
       cb.dataset.kind = 'group';
       const span = document.createElement('span');
-      span.textContent = `🏷️ ${g.name}`;
+      span.textContent = g.name;
       label.append(cb, span);
       wrap.appendChild(label);
     }
@@ -391,7 +392,7 @@ class PlaygroundController {
         bmSel.add(opt);
       }
       for (const f of folders) {
-        const opt = new Option(`[${tab.name}] 📁 ${f.name}`, JSON.stringify({ tabId: tab.id, id: f.id, name: f.name }));
+        const opt = new Option(`[${tab.name}] / ${f.name}`, JSON.stringify({ tabId: tab.id, id: f.id, name: f.name }));
         folSel.add(opt);
       }
     }

@@ -15,6 +15,7 @@ class DashboardController {
 
   async init() {
     await this.loadCurrentView();
+    if (typeof hydrateIcons === 'function') hydrateIcons();
     this.bindEvents();
     await this.render();
   }

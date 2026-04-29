@@ -12,30 +12,30 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <button class="side-item" data-view="links" title="Links">
-        <span class="side-icon">🔗</span>
+        <span class="side-icon" data-icon="bookmark"></span>
         <span class="side-label">Links</span>
       </button>
       <button class="side-item" data-view="todo" title="Todo">
-        <span class="side-icon">✅</span>
+        <span class="side-icon" data-icon="check"></span>
         <span class="side-label">Todo</span>
       </button>
       <button class="side-item" data-view="playground" title="Playground">
-        <span class="side-icon">🔬</span>
+        <span class="side-icon" data-icon="flask"></span>
         <span class="side-label">Playground</span>
       </button>
       <button class="side-item" id="openDashboardBtn" title="Dashboard">
-        <span class="side-icon">📊</span>
+        <span class="side-icon" data-icon="dashboard"></span>
         <span class="side-label">Dashboard</span>
       </button>
       <div class="side-spacer"></div>
       <button class="side-item" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
-        <span class="side-icon">⚙️</span>
+        <span class="side-icon" data-icon="settings"></span>
         <span class="side-label">Settings</span>
       </button>
     </aside>
     <div class="settings-menu" id="settingsMenu" hidden>
-      <button class="dropdown-item" id="profileBtn">👤 Profile</button>
-      <button class="dropdown-item danger" id="logoutBtn">🚪 Log out</button>
+      <button class="dropdown-item" id="profileBtn"><span data-icon="user"></span> Profile</button>
+      <button class="dropdown-item danger" id="logoutBtn"><span data-icon="logout"></span> Log out</button>
     </div>
 
     <!-- Main area -->
@@ -46,7 +46,7 @@
           type="text"
           class="search-input"
           id="searchInput"
-          placeholder="🔍 Search..."
+          placeholder="Search..."
         />
       </div>
 
@@ -180,6 +180,50 @@
     </div>
   </div>
 
+  <!-- Link Properties Modal -->
+  <div class="modal" id="propertiesModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Link properties</h3>
+        <button class="modal-close" data-modal="propertiesModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Name</label>
+          <div id="propName" class="profile-field">—</div>
+        </div>
+        <div class="form-group">
+          <label>URL</label>
+          <div id="propUrl" class="profile-field">—</div>
+        </div>
+        <div class="form-group">
+          <label>Platform</label>
+          <div id="propPlatform" class="profile-field">—</div>
+        </div>
+        <div class="form-group">
+          <label>Tab</label>
+          <div id="propTab" class="profile-field">—</div>
+        </div>
+        <div class="form-group">
+          <label>Folder</label>
+          <div id="propFolder" class="profile-field">—</div>
+        </div>
+        <div class="form-group">
+          <label>Created</label>
+          <div id="propCreated" class="profile-field">—</div>
+        </div>
+        <div class="form-group">
+          <label>ID</label>
+          <div id="propId" class="profile-field">—</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="propCopyUrlBtn">📋 Copy URL</button>
+        <button class="btn btn-primary" id="propOpenBtn">🌐 Open</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Profile Modal -->
   <div class="modal" id="profileModal">
     <div class="modal-content">
@@ -229,6 +273,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="../lib/icons.js"></script>
   <script src="../lib/api.js"></script>
   <script src="../lib/auth.js"></script>
   <script src="../lib/storage.js"></script>

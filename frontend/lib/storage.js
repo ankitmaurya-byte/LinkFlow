@@ -61,7 +61,16 @@ class StorageManager {
 
   // === TABS ===
   async getTabs() {
-    return DEFAULT_TABS.slice();
+    const { tabNameOverrides } = await this._get(['tabNameOverrides']);
+    const overrides = tabNameOverrides || {};
+    return DEFAULT_TABS.map(t => ({ ...t, name: overrides[t.id] || t.name }));
+  }
+
+  async renameTab(tabId, newName) {
+    const { tabNameOverrides } = await this._get(['tabNameOverrides']);
+    const overrides = tabNameOverrides || {};
+    overrides[tabId] = newName;
+    await this._set({ tabNameOverrides: overrides });
   }
 
   async updateTabCount(_tabId, _count) {

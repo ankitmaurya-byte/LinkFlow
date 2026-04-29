@@ -20,10 +20,10 @@
       <div class="header-actions">
         <button class="logout-btn" id="logoutBtn" title="Log out" hidden>Log out</button>
         <button class="btn btn-secondary" id="playgroundBtn">
-          🔬 Playground
+          <span data-icon="flask"></span> Playground
         </button>
         <button class="btn btn-primary" id="saveCurrentTabBtn">
-          + Save Current Tab
+          <span data-icon="save"></span> Save Current Tab
         </button>
       </div>
     </header>
@@ -33,37 +33,37 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="search-container">
-          <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search..." />
+          <input type="text" class="search-input" id="searchInput" placeholder="Search..." />
         </div>
 
         <nav class="tabs-nav">
           <button class="tab-btn active" data-tab="all-links">
-            📚 All Links
+            <span data-icon="bookmark"></span> All Links
             <span class="tab-count">0</span>
           </button>
           <button class="tab-btn" data-tab="work">
-            💼 Work
+            <span data-icon="briefcase"></span> Work
             <span class="tab-count">0</span>
           </button>
           <button class="tab-btn" data-tab="personal">
-            👤 Personal
+            <span data-icon="user"></span> Personal
             <span class="tab-count">0</span>
           </button>
           <button class="tab-btn" data-tab="inspiration">
-            💡 Inspiration
+            <span data-icon="bulb"></span> Inspiration
             <span class="tab-count">0</span>
           </button>
         </nav>
 
         <div class="sidebar-actions">
           <button class="btn btn-outline btn-block" id="newFolderBtn">
-            📁 New Folder
+            <span data-icon="folder-plus"></span> New Folder
           </button>
           <button class="btn btn-outline btn-block" id="pasteUrlBtn">
-            📋 Paste URL
+            <span data-icon="link"></span> Paste URL
           </button>
           <button class="btn btn-outline btn-block" id="importBookmarksBtn">
-            📥 Import bookmarks.html
+            <span data-icon="upload"></span> Import bookmarks.html
           </button>
           <input type="file" id="bookmarksFileInput" accept=".html,text/html" hidden>
         </div>
@@ -78,10 +78,10 @@
         <div class="view-controls">
           <div class="view-mode">
             <button class="view-mode-btn active" data-mode="grid">
-              ⊞ Grid
+              <span data-icon="grid"></span> Grid
             </button>
             <button class="view-mode-btn" data-mode="list">
-              ☰ List
+              <span data-icon="list"></span> List
             </button>
           </div>
 
@@ -102,7 +102,7 @@
 
         <!-- Empty State -->
         <div class="empty-state" id="emptyState" style="display: none;">
-          <div class="empty-icon">📂</div>
+          <div class="empty-icon" data-icon="inbox"></div>
           <h3>No links yet</h3>
           <p>Start saving links to see them here</p>
         </div>
@@ -170,6 +170,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="../lib/icons.js"></script>
   <script src="../lib/api.js"></script>
   <script src="../lib/auth.js"></script>
   <script src="../lib/storage.js"></script>
