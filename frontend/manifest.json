@@ -36,7 +36,13 @@
     "default_title": "LinkFlow"
   },
   "background": {
-    "scripts": ["lib/bookmarks-sync.js", "background.js"]
+    "scripts": [
+      "lib/api.js",
+      "lib/auth.js",
+      "lib/storage.js",
+      "lib/bookmarks-sync.js",
+      "background.js"
+    ]
   },
   "content_scripts": [
     {

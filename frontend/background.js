@@ -64,7 +64,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'SYNC_BOOKMARKS') {
-    bookmarkSync.init().then(() => bookmarkSync.schedule())
+    bookmarkSync.run()
       .then(() => sendResponse({ ok: true }))
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;

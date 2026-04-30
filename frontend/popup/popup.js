@@ -129,6 +129,22 @@ class PopupController {
       modalManager.open('profileModal');
     });
 
+    // Sync bookmarks (manual trigger from settings menu) — runs in background
+    // page where browser.bookmarks API is reliably available.
+    document.getElementById('syncBookmarksBtn')?.addEventListener('click', async () => {
+      settingsMenu.hidden = true;
+      settingsBtn.setAttribute('aria-expanded', 'false');
+      try {
+        const res = await browser.runtime.sendMessage({ type: 'SYNC_BOOKMARKS' });
+        if (!res?.ok) throw new Error(res?.error || 'unknown error');
+        storage.invalidate?.();
+        await this.render();
+        await uiAlert('Bookmarks sync complete.');
+      } catch (err) {
+        await uiAlert('Sync failed: ' + (err?.message || err));
+      }
+    });
+
     // Open dashboard (from settings menu)
     document.getElementById('openDashboardBtn').addEventListener('click', () => {
       settingsMenu.hidden = true;
