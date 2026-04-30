@@ -738,6 +738,17 @@ class PopupController {
     row.addEventListener('click', () => {
       if (onClick) onClick();
     });
+
+    // Hover-to-select for folder rows (auto-opens next column).
+    if (isFolder && !selected && onClick) {
+      let hoverTimer = null;
+      row.addEventListener('mouseenter', () => {
+        hoverTimer = setTimeout(() => onClick(), 180);
+      });
+      row.addEventListener('mouseleave', () => {
+        if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+      });
+    }
     return row;
   }
 
