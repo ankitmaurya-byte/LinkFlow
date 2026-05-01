@@ -51,6 +51,10 @@
 
   window.addEventListener('resize', () => {
     applyHostPosition(clampToViewport(currentPos.x, currentPos.y));
+    // Clamp panel to new viewport
+    PANEL_W = clampSize(PANEL_W, PANEL_MIN_W, window.innerWidth - 16);
+    PANEL_H = clampSize(PANEL_H, PANEL_MIN_H, window.innerHeight - 16);
+    if (wrap.classList.contains('open')) positionPanel();
   });
 
   const style = document.createElement('style');
@@ -92,17 +96,24 @@
     .bubble.dragging {
       cursor: grabbing;
     }
-    .bubble.locked {
-      outline: 2px solid #181d26;
-      outline-offset: 2px;
+    .bubble.locked::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-color: rgba(24, 29, 38, 0.55);
+      background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='28' height='28' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      pointer-events: none;
     }
     .panel {
       width: 720px;
       height: 560px;
+      min-width: 400px;
+      min-height: 300px;
       max-width: calc(100vw - 32px);
       max-height: calc(100vh - 32px);
       background: #ffffff;
-      border-radius: 12px;
       box-shadow: 0 10px 30px rgba(24, 29, 38, 0.12), 0 0 0 1px #dddddd;
       overflow: hidden;
       display: none;
@@ -114,6 +125,21 @@
       width: 100%;
       border: 0;
     }
+    .resize-handle {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      z-index: 10;
+      background: transparent;
+    }
+    .resize-handle.br { right: 0; bottom: 0; cursor: nwse-resize; }
+    .resize-handle::after {
+      content: '';
+      position: absolute;
+      width: 8px; height: 8px;
+      background: linear-gradient(135deg, transparent 50%, #9297a0 50%);
+    }
+    .resize-handle.br::after { right: 2px; bottom: 2px; }
   `;
   root.appendChild(style);
 
@@ -122,7 +148,10 @@
 
   const panel = document.createElement('div');
   panel.className = 'panel';
-  panel.innerHTML = `<iframe class="panel-frame" data-frame title="LinkFlow"></iframe>`;
+  panel.innerHTML = `
+    <iframe class="panel-frame" data-frame title="LinkFlow"></iframe>
+    <div class="resize-handle br" data-corner="br"></div>
+  `;
   const frame = panel.querySelector('[data-frame]');
 
   const bubble = document.createElement('div');
@@ -142,9 +171,29 @@
   let dragLock = false;
   let userLock = false;
   let dismissedByClick = false;
-  const PANEL_W = 720;
-  const PANEL_H = 560;
+  const DEFAULT_PANEL_W = 720;
+  const DEFAULT_PANEL_H = 560;
+  const PANEL_MIN_W = 400;
+  const PANEL_MIN_H = 300;
+  let PANEL_W = DEFAULT_PANEL_W;
+  let PANEL_H = DEFAULT_PANEL_H;
+  const SIZE_KEY = 'floatingPanelSize';
   const GAP = 0;
+
+  async function loadSavedSize() {
+    try {
+      const data = await browserApi.storage.local.get([SIZE_KEY]);
+      const s = data[SIZE_KEY];
+      if (s && Number.isFinite(s.w) && Number.isFinite(s.h)) {
+        PANEL_W = clampSize(s.w, PANEL_MIN_W, window.innerWidth - 16);
+        PANEL_H = clampSize(s.h, PANEL_MIN_H, window.innerHeight - 16);
+      }
+    } catch (_) {}
+  }
+  function clampSize(v, lo, hi) { return Math.max(lo, Math.min(v, hi)); }
+  async function saveSize(w, h) {
+    try { await browserApi.storage.local.set({ [SIZE_KEY]: { w, h } }); } catch (_) {}
+  }
 
   const ensureFrameLoaded = () => {
     if (!frame.src) {
@@ -212,7 +261,7 @@
     ensureFrameLoaded();
   };
   const schedClose = () => {
-    if (dragLock || userLock || dragState) return;
+    if (dragLock || userLock || dragState || resizeState) return;
     if (closeTimer) clearTimeout(closeTimer);
     closeTimer = setTimeout(() => wrap.classList.remove('open'), 350);
   };
@@ -310,5 +359,46 @@
   });
 
   loadSavedPosition();
+  loadSavedSize();
+
+  // === Resize handles ===
+  let resizeState = null;
+  panel.querySelectorAll('.resize-handle').forEach(h => {
+    h.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      h.setPointerCapture(e.pointerId);
+      resizeState = {
+        pointerId: e.pointerId,
+        corner: h.dataset.corner,
+        startX: e.clientX,
+        startY: e.clientY,
+        startW: PANEL_W,
+        startH: PANEL_H
+      };
+    });
+    h.addEventListener('pointermove', (e) => {
+      if (!resizeState || resizeState.pointerId !== e.pointerId) return;
+      const dx = e.clientX - resizeState.startX;
+      const dy = e.clientY - resizeState.startY;
+      const c = resizeState.corner;
+      let w = resizeState.startW;
+      let hh = resizeState.startH;
+      if (c === 'br' || c === 'tr') w = resizeState.startW + dx;
+      if (c === 'bl' || c === 'tl') w = resizeState.startW - dx;
+      if (c === 'br' || c === 'bl') hh = resizeState.startH + dy;
+      if (c === 'tr' || c === 'tl') hh = resizeState.startH - dy;
+      PANEL_W = clampSize(w, PANEL_MIN_W, window.innerWidth - 16);
+      PANEL_H = clampSize(hh, PANEL_MIN_H, window.innerHeight - 16);
+      positionPanel();
+    });
+    const endResize = (e) => {
+      if (!resizeState || resizeState.pointerId !== e.pointerId) return;
+      resizeState = null;
+      saveSize(PANEL_W, PANEL_H);
+    };
+    h.addEventListener('pointerup', endResize);
+    h.addEventListener('pointercancel', endResize);
+  });
 
 })();

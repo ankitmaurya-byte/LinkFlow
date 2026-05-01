@@ -100,6 +100,12 @@ body {
   margin: 0;
   padding: 0;
 }
+body.embed-mode {
+  width: 100% !important;
+  height: 100vh !important;
+  min-width: 0;
+  min-height: 0;
+}
 
 /* ===== APP SHELL ===== */
 .app-shell {

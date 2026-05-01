@@ -1245,6 +1245,13 @@ class PopupController {
 
 // Initialize popup when DOM is ready, gated on auth.
 async function bootstrapPopup() {
+  // Embed-mode flag — popup may be loaded inside floating panel iframe (?embed=1).
+  // In that case body fills 100% so the iframe content reflows on resize.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('embed') === '1') document.body.classList.add('embed-mode');
+  } catch (_) {}
+
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
