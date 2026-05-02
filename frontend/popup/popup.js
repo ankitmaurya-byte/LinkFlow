@@ -1540,12 +1540,12 @@ class PopupController {
     const modules = [
       { name: 'Canvas', desc: 'Drawing board', module: 'canvas/canvas.html' },
       { name: 'GitHub explorer', desc: 'Repos, commits, issues, PRs', module: 'github/github.html' },
-      { name: 'Startup explorer', desc: 'Markets + valuations', soon: true },
-      { name: 'Feed', desc: 'Posts, comments, likes', soon: true },
-      { name: 'Clocks', desc: 'Multi-timezone clocks', soon: true },
-      { name: 'Timer', desc: 'Pomodoro / countdown', soon: true },
-      { name: 'Blogs', desc: 'Long-form like Medium', soon: true },
-      { name: 'Newsletters', desc: 'Subscribe + read', soon: true }
+      { name: 'Feed', desc: 'Posts, comments, likes', module: 'feed/feed.html' },
+      { name: 'Startup explorer', desc: 'HN, Product Hunt, GitHub trending', module: 'startups/startups.html' },
+      { name: 'Clocks', desc: 'Multi-timezone clocks', module: 'clocks/clocks.html' },
+      { name: 'Timer', desc: 'Pomodoro / countdown', module: 'timer/timer.html' },
+      { name: 'Blogs', desc: 'Long-form like Medium', module: 'blogs/blogs.html' },
+      { name: 'Newsletters', desc: 'Subscribe + read RSS', module: 'newsletters/newsletters.html' }
     ];
     const grid = document.getElementById('hubModules');
     if (grid) {

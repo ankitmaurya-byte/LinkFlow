@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LinkFlow Feed</title>
+  <link rel="stylesheet" href="feed.css" />
+</head>
+<body>
+  <div class="fd-app">
+    <section class="fd-compose">
+      <textarea id="fdText" rows="3" placeholder="What's on your mind?"></textarea>
+      <div class="fd-compose-bar">
+        <button class="fd-btn-link" id="fdAttachBtn" title="Attach image">📎 Image</button>
+        <span id="fdAttachStatus" class="fd-status"></span>
+        <button class="fd-btn-primary" id="fdPostBtn">Post</button>
+      </div>
+    </section>
+    <section class="fd-list" id="fdList">
+      <div class="fd-empty">Loading…</div>
+    </section>
+  </div>
+  <script src="../lib/api.js"></script>
+  <script src="../lib/auth.js"></script>
+  <script src="../lib/dialog.js"></script>
+  <script src="feed.js"></script>
+</body>
+</html>

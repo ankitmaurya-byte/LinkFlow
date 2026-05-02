@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Newsletters</title>
+  <link rel="stylesheet" href="newsletters.css" />
+</head>
+<body>
+  <div class="nl-app">
+    <aside class="nl-side">
+      <div class="nl-add">
+        <input type="url" id="nlFeedUrl" placeholder="https://example.com/feed.xml" />
+        <button id="nlAddBtn">+</button>
+      </div>
+      <div class="nl-list" id="nlList"></div>
+    </aside>
+    <main class="nl-main" id="nlMain">
+      <div class="nl-empty">Subscribe to a feed to start.</div>
+    </main>
+  </div>
+  <script src="../lib/api.js"></script>
+  <script src="../lib/auth.js"></script>
+  <script src="../lib/dialog.js"></script>
+  <script src="newsletters.js"></script>
+</body>
+</html>

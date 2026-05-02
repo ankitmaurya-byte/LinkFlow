@@ -11,6 +11,9 @@ import { router as shareRouter } from './routes/share.js';
 import { router as notesRouter, publicRouter as notesPublicRouter } from './routes/notes.js';
 import { router as uploadRouter } from './routes/upload.js';
 import { router as featureRequestsRouter } from './routes/featureRequests.js';
+import { router as feedRouter } from './routes/feed.js';
+import { router as blogsRouter, publicRouter as blogsPublicRouter } from './routes/blogs.js';
+import { router as subsRouter } from './routes/subscriptions.js';
 
 export function createApp() {
   const app = express();
@@ -32,6 +35,10 @@ export function createApp() {
   app.use('/public/notes', notesPublicRouter);
   app.use('/upload', uploadRouter);
   app.use('/feature-requests', featureRequestsRouter);
+  app.use('/feed', feedRouter);
+  app.use('/blogs', blogsRouter);
+  app.use('/public/blogs', blogsPublicRouter);
+  app.use('/subscriptions', subsRouter);
 
   app.use(notFound);
   app.use(errorHandler);

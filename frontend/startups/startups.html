@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Startup Explorer</title>
+  <link rel="stylesheet" href="startups.css" />
+</head>
+<body>
+  <div class="su-app">
+    <header class="su-tabs">
+      <button class="su-tab active" data-tab="hn-top">🔥 HN Top</button>
+      <button class="su-tab" data-tab="hn-show">🚀 Show HN</button>
+      <button class="su-tab" data-tab="hn-jobs">💼 Who's hiring</button>
+      <button class="su-tab" data-tab="ph">🦄 Product Hunt</button>
+      <button class="su-tab" data-tab="trending">📈 GitHub trending</button>
+      <span class="su-spacer"></span>
+      <button class="su-refresh" id="suRefreshBtn" title="Refresh">↻</button>
+    </header>
+    <main class="su-list" id="suList">
+      <div class="su-empty">Loading…</div>
+    </main>
+  </div>
+  <script src="../lib/api.js"></script>
+  <script src="../lib/auth.js"></script>
+  <script src="../lib/dialog.js"></script>
+  <script src="startups.js"></script>
+</body>
+</html>

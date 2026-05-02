@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkFlow",
-  "version": "1.0.5",
+  "version": "1.0.6",
     "browser_specific_settings": {
     "gecko": {
       "id": "ankitmaurya2989@gmail.com",
@@ -62,7 +62,13 @@
         "lib/*",
         "playground/*",
         "canvas/*",
-        "github/*"
+        "github/*",
+        "feed/*",
+        "clocks/*",
+        "timer/*",
+        "blogs/*",
+        "newsletters/*",
+        "startups/*"
       ],
       "matches": ["<all_urls>"]
     }

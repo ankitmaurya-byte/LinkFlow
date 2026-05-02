@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Blogs</title>
+  <link rel="stylesheet" href="blogs.css" />
+</head>
+<body>
+  <div class="bg-app">
+    <aside class="bg-side">
+      <div class="bg-tabs">
+        <button class="bg-tab active" data-tab="mine">My blogs</button>
+        <button class="bg-tab" data-tab="public">Public feed</button>
+      </div>
+      <button class="bg-new" id="bgNewBtn">+ New blog</button>
+      <div class="bg-list" id="bgList"></div>
+    </aside>
+    <main class="bg-main" id="bgMain">
+      <div class="bg-empty">Select or create a blog.</div>
+    </main>
+  </div>
+  <script src="../lib/api.js"></script>
+  <script src="../lib/auth.js"></script>
+  <script src="../lib/dialog.js"></script>
+  <script src="blogs.js"></script>
+</body>
+</html>
