@@ -104,6 +104,14 @@ class PopupController {
 
     document.getElementById('saveSettingsBtn')?.addEventListener('click', () => this.saveSettings());
 
+    // Global custom context menu — suppress browser default everywhere in popup.
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      // Lock floating panel close while custom menu open.
+      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      this.openCustomContextMenu(e);
+    });
+
     document.getElementById('openSettingsBtn')?.addEventListener('click', () => {
       const settingsMenu = document.getElementById('settingsMenu');
       const settingsBtn = document.getElementById('settingsBtn');
@@ -485,6 +493,7 @@ class PopupController {
     card.draggable = true;
     card.dataset.taskId = task.id;
     card.textContent = task.title;
+    card._ctx = { __kind: 'task', projectId, task };
 
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/task', task.id);
@@ -859,6 +868,8 @@ class PopupController {
       });
     }
 
+    if (contextItem) row._ctx = { ...contextItem, __kind: 'tree' };
+
     row.addEventListener('click', () => {
       if (onClick) onClick();
     });
@@ -927,6 +938,88 @@ class PopupController {
         button._activeMenu = null;
       }
     }, 200);
+  }
+
+  openCustomContextMenu(e) {
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.remove());
+
+    // Find nearest tagged target (link/folder/tab/task).
+    let target = e.target;
+    while (target && !target._ctx) target = target.parentElement;
+    const ctx = target?._ctx;
+
+    const menu = document.createElement('div');
+    menu.className = 'dropdown-menu';
+    if (ctx?.__kind === 'task') {
+      menu.innerHTML = `
+        <button class="dropdown-item" data-act="edit">${iconSvg('edit')} Edit</button>
+        <button class="dropdown-item" data-act="share">${iconSvg('share')} Share</button>
+        <button class="dropdown-item danger" data-act="delete">${iconSvg('trash')} Delete</button>
+      `;
+    } else if (ctx?.__kind === 'tree') {
+      menu.innerHTML = `
+        <button class="dropdown-item" data-act="edit">${iconSvg('edit')} Edit</button>
+        <button class="dropdown-item" data-act="share">${iconSvg('share')} Share</button>
+        <button class="dropdown-item danger" data-act="delete">${iconSvg('trash')} Delete</button>
+      `;
+    } else {
+      // No target → no menu.
+      return;
+    }
+    document.body.appendChild(menu);
+    menu.style.position = 'fixed';
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+    menu.style.zIndex = '9999';
+
+    menu.addEventListener('click', (ev) => ev.stopPropagation());
+    menu.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const act = item.dataset.act;
+        menu.remove();
+        if (ctx.__kind === 'task') {
+          if (act === 'edit') this.focusTaskCard(ctx.task.id);
+          else if (act === 'share') {
+            await uiAlert('Share task: not implemented yet.');
+          } else if (act === 'delete') {
+            if (await uiConfirm(`Delete task "${ctx.task.title}"?`)) {
+              await storage.deleteTodoTask(ctx.projectId, ctx.task.id);
+              await this.renderKanban();
+            }
+          }
+        } else if (ctx.__kind === 'tree') {
+          this.currentTab = ctx.tabId;
+          if (act === 'edit') {
+            const row = target.closest('.col-row');
+            const labelEl = row?.querySelector('.col-label');
+            if (row && labelEl) this.startInlineEdit(row, labelEl, ctx);
+          } else if (act === 'share') {
+            if (ctx.type === 'folder') this.showShareFolderModal(ctx.tabId, ctx.folder);
+            else await uiAlert('Sharing only supported for folders right now.');
+          } else if (act === 'delete') {
+            if (ctx.type === 'link') this.showDeleteModal(ctx.link, 'link');
+            else if (ctx.type === 'folder') this.showDeleteModal(ctx.folder, 'folder');
+            else if (ctx.type === 'tab') this.deleteTabConfirm(ctx.tabId, ctx.tab.name);
+          }
+        }
+      });
+    });
+
+    const releaseLock = () => {
+      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+    };
+    menu.addEventListener('click', releaseLock);
+
+    setTimeout(() => {
+      const close = (ev) => {
+        if (!menu.contains(ev.target)) {
+          menu.remove();
+          releaseLock();
+          document.removeEventListener('click', close);
+        }
+      };
+      document.addEventListener('click', close);
+    }, 0);
   }
 
   showTreeContextMenu(button, ctx) {
