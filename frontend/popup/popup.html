@@ -28,14 +28,16 @@
         <span class="side-icon" data-icon="dashboard"></span>
         <span class="side-label">Dashboard</span>
       </button>
-      <button class="side-item" id="settingsBtn" title="Settings" aria-haspopup="true" aria-expanded="false">
-        <span class="side-icon" data-icon="settings"></span>
-        <span class="side-label">Settings</span>
+      <button class="side-item" id="settingsBtn" title="Account" aria-haspopup="true" aria-expanded="false">
+        <span class="side-icon" data-icon="user"></span>
+        <span class="side-label" id="profileSideLabel">Account</span>
       </button>
     </aside>
     <div class="settings-menu" id="settingsMenu" hidden>
       <button class="dropdown-item" id="profileBtn"><span data-icon="user"></span> Profile</button>
+      <button class="dropdown-item" id="openSettingsBtn"><span data-icon="settings"></span> Settings</button>
       <button class="dropdown-item" id="syncBookmarksBtn"><span data-icon="layers"></span> Sync bookmarks</button>
+      <button class="dropdown-item" id="notificationsBtn"><span data-icon="info"></span> Notifications</button>
       <button class="dropdown-item danger" id="logoutBtn"><span data-icon="logout"></span> Log out</button>
     </div>
 
@@ -72,6 +74,50 @@
       <!-- Playground view (iframe) -->
       <div class="view-playground" id="playgroundView" hidden>
         <iframe class="playground-frame-inline" id="playgroundFrameInline" title="Playground"></iframe>
+      </div>
+
+      <!-- Settings view -->
+      <div class="view-settings" id="settingsView" hidden>
+        <div class="settings-page">
+          <h2 class="settings-h">Settings</h2>
+
+          <section class="settings-section">
+            <h3>Appearance</h3>
+            <div class="settings-row">
+              <label for="setTextColor">Text color</label>
+              <input type="color" id="setTextColor" />
+            </div>
+            <div class="settings-row">
+              <label for="setBgColor">Background color</label>
+              <input type="color" id="setBgColor" />
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <h3>Floating widget</h3>
+            <div class="settings-row col">
+              <label for="setWhitelist">Whitelist (one host pattern per line — bubble shows only on these)</label>
+              <textarea id="setWhitelist" rows="4" placeholder="example.com&#10;*.github.com"></textarea>
+            </div>
+            <div class="settings-row col">
+              <label for="setBlacklist">Blacklist (one host pattern per line — bubble hidden on these)</label>
+              <textarea id="setBlacklist" rows="4" placeholder="bank.com&#10;*.gov"></textarea>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <h3>Notifications</h3>
+            <label class="settings-row">
+              <input type="checkbox" id="setNotifications" />
+              Enable notifications
+            </label>
+          </section>
+
+          <div class="settings-actions">
+            <button class="btn btn-primary" id="saveSettingsBtn">Save</button>
+            <span id="settingsStatus" class="settings-status"></span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

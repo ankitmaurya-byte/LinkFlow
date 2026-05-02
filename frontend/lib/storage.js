@@ -289,6 +289,25 @@ class StorageManager {
     await this.setTodoData(data);
   }
 
+  // === USER SETTINGS (local) ===
+  async getSettings() {
+    const { userSettings } = await this._get(['userSettings']);
+    return Object.assign({
+      textColor: '#181d26',
+      bgColor: '#ffffff',
+      whitelist: '',
+      blacklist: '',
+      notificationsEnabled: true
+    }, userSettings || {});
+  }
+
+  async saveSettings(patch) {
+    const cur = await this.getSettings();
+    const next = Object.assign({}, cur, patch);
+    await this._set({ userSettings: next });
+    return next;
+  }
+
   // === SEARCH ===
   async searchLinks(tabId, query) {
     const all = await this.getAllLinks(tabId);

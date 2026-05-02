@@ -7,6 +7,34 @@
 
   const browserApi = (typeof browser !== 'undefined') ? browser : chrome;
 
+  // Quick host filter via user settings (whitelist/blacklist).
+  function matchesPattern(host, pattern) {
+    pattern = pattern.trim().toLowerCase();
+    if (!pattern) return false;
+    if (pattern.startsWith('*.')) {
+      const suffix = pattern.slice(1); // ".github.com"
+      return host === pattern.slice(2) || host.endsWith(suffix);
+    }
+    return host === pattern || host.endsWith('.' + pattern);
+  }
+  async function shouldShowOnThisSite() {
+    try {
+      const { userSettings = {} } = await browserApi.storage.local.get(['userSettings']);
+      const host = (location.hostname || '').toLowerCase();
+      const wl = (userSettings.whitelist || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const bl = (userSettings.blacklist || '').split('\n').map(s => s.trim()).filter(Boolean);
+      if (bl.some(p => matchesPattern(host, p))) return false;
+      if (wl.length > 0 && !wl.some(p => matchesPattern(host, p))) return false;
+      return true;
+    } catch (_) { return true; }
+  }
+  // If site blocked, abort injection entirely.
+  shouldShowOnThisSite().then(ok => {
+    if (!ok) { window.__linkflowFloatingBlocked = true; return; }
+    initFloating();
+  });
+  function initFloating() {
+
   const STORAGE_KEY = 'floatingPosition';
   const BUBBLE_W = 100;
   const BUBBLE_H = 79;
@@ -59,7 +87,8 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    :host, * { box-sizing: border-box; border-radius: 0 !important; }
+    :host, * { box-sizing: border-box; border-radius: 0 !important; scrollbar-width: none !important; -ms-overflow-style: none !important; }
+    *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
     .wrap {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: #111827;
@@ -400,5 +429,6 @@
     h.addEventListener('pointerup', endResize);
     h.addEventListener('pointercancel', endResize);
   });
+  } // end initFloating
 
 })();

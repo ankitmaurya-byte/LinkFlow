@@ -26,6 +26,17 @@ class PopupController {
     this.hydrateIcons();
     this.bindEvents();
     document.querySelector('.side-item[data-view="links"]')?.classList.add('active');
+    try {
+      const s = await storage.getSettings();
+      await this.applySettings(s);
+    } catch (_) {}
+    try {
+      const user = await auth.getCurrentUser();
+      if (user?.username) {
+        const lbl = document.getElementById('profileSideLabel');
+        if (lbl) lbl.textContent = '@' + user.username;
+      }
+    } catch (_) {}
     await this.render();
   }
 
@@ -91,6 +102,22 @@ class PopupController {
       this.sendShareFolder();
     });
 
+    document.getElementById('saveSettingsBtn')?.addEventListener('click', () => this.saveSettings());
+
+    document.getElementById('openSettingsBtn')?.addEventListener('click', () => {
+      const settingsMenu = document.getElementById('settingsMenu');
+      const settingsBtn = document.getElementById('settingsBtn');
+      if (settingsMenu) settingsMenu.hidden = true;
+      if (settingsBtn) settingsBtn.setAttribute('aria-expanded', 'false');
+      this.switchView('settings');
+    });
+
+    document.getElementById('notificationsBtn')?.addEventListener('click', async () => {
+      const settingsMenu = document.getElementById('settingsMenu');
+      if (settingsMenu) settingsMenu.hidden = true;
+      await uiAlert('No notifications yet.');
+    });
+
     // Create folder (modal action)
     document.getElementById('createFolderBtn').addEventListener('click', () => {
       this.createFolder();
@@ -105,12 +132,38 @@ class PopupController {
     // Settings button — toggle dropdown
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsMenu = document.getElementById('settingsMenu');
+    const sidebar = document.getElementById('sidebar');
+    let settingsCloseTimer = null;
+    const showSettingsMenu = () => {
+      if (settingsCloseTimer) { clearTimeout(settingsCloseTimer); settingsCloseTimer = null; }
+      settingsMenu.hidden = false;
+      settingsBtn.setAttribute('aria-expanded', 'true');
+      sidebar?.classList.add('menu-open');
+    };
+    const scheduleHide = () => {
+      if (settingsCloseTimer) clearTimeout(settingsCloseTimer);
+      settingsCloseTimer = setTimeout(() => {
+        settingsMenu.hidden = true;
+        settingsBtn.setAttribute('aria-expanded', 'false');
+        sidebar?.classList.remove('menu-open');
+      }, 250);
+    };
     settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isOpen = !settingsMenu.hidden;
-      settingsMenu.hidden = isOpen;
-      settingsBtn.setAttribute('aria-expanded', String(!isOpen));
+      if (isOpen) {
+        settingsMenu.hidden = true;
+        settingsBtn.setAttribute('aria-expanded', 'false');
+      } else {
+        showSettingsMenu();
+      }
     });
+    settingsBtn.addEventListener('mouseenter', showSettingsMenu);
+    settingsBtn.addEventListener('mouseleave', scheduleHide);
+    settingsMenu.addEventListener('mouseenter', showSettingsMenu);
+    settingsMenu.addEventListener('mouseleave', scheduleHide);
+    // Belt-and-suspenders: any mousemove inside the menu re-asserts open state.
+    settingsMenu.addEventListener('mousemove', showSettingsMenu);
     document.addEventListener('click', (e) => {
       if (!settingsMenu.hidden &&
           !settingsMenu.contains(e.target) &&
@@ -195,9 +248,42 @@ class PopupController {
     document.getElementById('searchContainer').hidden = mode !== 'links';
     document.getElementById('todoView').hidden = mode !== 'todo';
     document.getElementById('playgroundView').hidden = mode !== 'playground';
+    document.getElementById('settingsView').hidden = mode !== 'settings';
     if (mode === 'todo') await this.renderTodo();
     else if (mode === 'playground') this.ensurePlaygroundFrame();
+    else if (mode === 'settings') await this.renderSettings();
     else await this.render();
+  }
+
+  async applySettings(s) {
+    document.documentElement.style.setProperty('--ink', s.textColor);
+    document.documentElement.style.setProperty('--text-primary', s.textColor);
+    document.documentElement.style.setProperty('--canvas', s.bgColor);
+    document.documentElement.style.setProperty('--bg-primary', s.bgColor);
+  }
+
+  async renderSettings() {
+    const s = await storage.getSettings();
+    document.getElementById('setTextColor').value = s.textColor;
+    document.getElementById('setBgColor').value = s.bgColor;
+    document.getElementById('setWhitelist').value = s.whitelist || '';
+    document.getElementById('setBlacklist').value = s.blacklist || '';
+    document.getElementById('setNotifications').checked = !!s.notificationsEnabled;
+  }
+
+  async saveSettings() {
+    const patch = {
+      textColor: document.getElementById('setTextColor').value,
+      bgColor: document.getElementById('setBgColor').value,
+      whitelist: document.getElementById('setWhitelist').value,
+      blacklist: document.getElementById('setBlacklist').value,
+      notificationsEnabled: document.getElementById('setNotifications').checked
+    };
+    const s = await storage.saveSettings(patch);
+    await this.applySettings(s);
+    const status = document.getElementById('settingsStatus');
+    status.textContent = 'Saved';
+    setTimeout(() => { status.textContent = ''; }, 1500);
   }
 
   async renderTodo() {
@@ -513,6 +599,14 @@ class PopupController {
     await this.ensureAutoExpand();
     const container = document.getElementById('itemsContainer');
     const emptyState = document.getElementById('emptyState');
+
+    // Capture scroll positions before re-render so nothing jumps.
+    const savedScroll = {};
+    container.querySelectorAll('.tree-column[data-col-key]').forEach(c => {
+      savedScroll[c.dataset.colKey] = c.scrollTop;
+    });
+    const savedHorizontal = container.scrollLeft;
+
     container.innerHTML = '';
 
     // All columns built from path. path[0] is the (hidden) root tab's column.
@@ -520,6 +614,7 @@ class PopupController {
       const node = this.path[i];
       const col = document.createElement('div');
       col.className = 'tree-column';
+      col.dataset.colKey = `${node.tabId}::${node.folderId || 'root'}`;
 
       col.appendChild(this.makeActionRow(node.tabId, node.folderId));
 
@@ -574,8 +669,19 @@ class PopupController {
 
     emptyState.style.display = 'none';
 
-    // Auto-scroll to right so newest column is visible
-    container.scrollLeft = container.scrollWidth;
+    // Restore vertical scroll per column; horizontal scroll only if newer
+    // columns weren't added (else auto-scroll right to reveal new column).
+    container.querySelectorAll('.tree-column[data-col-key]').forEach(c => {
+      const v = savedScroll[c.dataset.colKey];
+      if (typeof v === 'number') c.scrollTop = v;
+    });
+    const newCount = container.querySelectorAll('.tree-column').length;
+    const oldCount = Object.keys(savedScroll).length;
+    if (newCount > oldCount) {
+      container.scrollLeft = container.scrollWidth;
+    } else {
+      container.scrollLeft = savedHorizontal;
+    }
 
     await this.updateTabCounts();
   }

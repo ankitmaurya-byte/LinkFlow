@@ -665,3 +665,7 @@ body.embed-mode .view-description {
 
 /* hidden helper consistent */
 .hidden { display: none !important; }
+
+/* HIDE SCROLLBARS */
+* { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+*::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }

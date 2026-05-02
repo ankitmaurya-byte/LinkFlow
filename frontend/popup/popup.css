@@ -129,9 +129,14 @@ body.embed-mode {
   z-index: 50;
 }
 
-.sidebar:hover {
-  flex: 0 0 200px;
-  width: 200px;
+.sidebar:hover,
+.sidebar.menu-open {
+  flex: 0 0 200px !important;
+  width: 200px !important;
+}
+
+.sidebar.menu-open .side-label {
+  opacity: 1 !important;
 }
 
 .side-item {
@@ -182,7 +187,9 @@ body.embed-mode {
 .settings-menu {
   position: fixed;
   bottom: 8px;
-  left: 52px;
+  /* Touch sidebar's right edge so cursor crossing from sidebar -> menu never
+     leaves both elements (otherwise mouseleave collapses sidebar mid-transition). */
+  left: 48px;
   min-width: 160px;
   background: white;
   border: 1px solid var(--border);
@@ -191,6 +198,9 @@ body.embed-mode {
   z-index: 1000;
   overflow: hidden;
 }
+/* Keep sidebar expanded as long as menu is open (cursor on menu). */
+.app-shell:has(.settings-menu:not([hidden])) .sidebar { flex: 0 0 200px; width: 200px; }
+.app-shell:has(.settings-menu:not([hidden])) .sidebar .side-label { opacity: 1; }
 
 .settings-menu[hidden] {
   display: none;
@@ -956,9 +966,50 @@ body.embed-mode {
 
 .view-todo[hidden],
 .content[hidden],
-.search-container[hidden] {
+.search-container[hidden],
+.view-settings[hidden],
+.view-playground[hidden] {
   display: none !important;
 }
+
+/* Settings page */
+.view-settings {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px;
+}
+.settings-page { max-width: 640px; }
+.settings-h { font-size: 18px; font-weight: 500; margin-bottom: 16px; }
+.settings-section {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+.settings-section h3 { font-size: 14px; font-weight: 500; margin-bottom: 12px; color: var(--body); }
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.settings-row.col { flex-direction: column; align-items: stretch; }
+.settings-row label { flex: 1; }
+.settings-row input[type="color"] {
+  width: 40px; height: 28px; padding: 0; border: 1px solid var(--hairline); cursor: pointer;
+}
+.settings-row textarea {
+  width: 100%;
+  padding: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  border: 1px solid var(--hairline);
+  background: var(--canvas);
+  color: var(--ink);
+  resize: vertical;
+}
+.settings-actions { display: flex; align-items: center; gap: 12px; }
+.settings-status { font-size: 13px; color: var(--success); }
 
 .todo-projects {
   flex: 0 0 var(--col-w);
@@ -1215,20 +1266,6 @@ body.embed-mode {
 .multi-select-row:hover { background: var(--surface-soft); }
 .empty-state-small { color: var(--muted); font-size: 13px; padding: 6px; }
 
-/* ===== SCROLLBAR ===== */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
-}
+/* ===== HIDE SCROLLBARS EVERYWHERE ===== */
+* { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+*::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }

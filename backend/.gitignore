@@ -5,4 +5,5 @@ coverage
 .DS_Store
 .vercel
 *.zip
-frontend/bookmark.zip
+bookmark.zip
+commits.md

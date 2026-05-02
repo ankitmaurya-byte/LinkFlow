@@ -619,3 +619,6 @@ body {
   font-weight: 500;
   font-size: 14px;
 }
+/* HIDE SCROLLBARS */
+* { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+*::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
