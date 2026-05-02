@@ -249,9 +249,11 @@ class PopupController {
     document.getElementById('todoView').hidden = mode !== 'todo';
     document.getElementById('playgroundView').hidden = mode !== 'playground';
     document.getElementById('settingsView').hidden = mode !== 'settings';
+    document.getElementById('notesView').hidden = mode !== 'notes';
     if (mode === 'todo') await this.renderTodo();
     else if (mode === 'playground') this.ensurePlaygroundFrame();
     else if (mode === 'settings') await this.renderSettings();
+    else if (mode === 'notes') await window.notesController?.open();
     else await this.render();
   }
 

@@ -19,6 +19,10 @@
         <span class="side-icon" data-icon="clipboard"></span>
         <span class="side-label">Todo</span>
       </button>
+      <button class="side-item" data-view="notes" title="Notes">
+        <span class="side-icon" data-icon="edit"></span>
+        <span class="side-label">Notes</span>
+      </button>
       <div class="side-spacer"></div>
       <button class="side-item" data-view="playground" title="Playground">
         <span class="side-icon" data-icon="flask"></span>
@@ -74,6 +78,14 @@
       <!-- Playground view (iframe) -->
       <div class="view-playground" id="playgroundView" hidden>
         <iframe class="playground-frame-inline" id="playgroundFrameInline" title="Playground"></iframe>
+      </div>
+
+      <!-- Notes view -->
+      <div class="view-notes" id="notesView" hidden>
+        <aside class="notes-list" id="notesList"></aside>
+        <main class="notes-editor" id="notesEditor">
+          <div class="notes-empty">Select or create a note</div>
+        </main>
       </div>
 
       <!-- Settings view -->
@@ -354,6 +366,7 @@
   <script src="../lib/auth.js"></script>
   <script src="../lib/storage.js"></script>
   <script src="../lib/bookmarks-sync.js"></script>
+  <script src="notes.js"></script>
   <script src="../lib/platform-detector.js"></script>
   <script src="../components/modal.js"></script>
   <script src="../components/breadcrumbs.js"></script>

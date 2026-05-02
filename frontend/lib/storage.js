@@ -308,6 +308,27 @@ class StorageManager {
     return next;
   }
 
+  // === NOTES ===
+  async listNotes() {
+    const res = await api.authedFetch('/notes');
+    return res.notes || [];
+  }
+  async getNote(id) {
+    const res = await api.authedFetch(`/notes/${id}`);
+    return res.note;
+  }
+  async createNote(payload = {}) {
+    const res = await api.authedFetch('/notes', { method: 'POST', body: payload });
+    return res.note;
+  }
+  async updateNote(id, patch) {
+    const res = await api.authedFetch(`/notes/${id}`, { method: 'PATCH', body: patch });
+    return res.note;
+  }
+  async deleteNote(id) {
+    await api.authedFetch(`/notes/${id}`, { method: 'DELETE' });
+  }
+
   // === SEARCH ===
   async searchLinks(tabId, query) {
     const all = await this.getAllLinks(tabId);
