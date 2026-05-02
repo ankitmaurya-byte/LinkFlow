@@ -57,6 +57,7 @@ async function logout() {
     } catch (_) { /* best-effort */ }
   }
   await api.clearTokens();
+  api.clearCache?.();
   notifyAuthChange({ authed: false, user: null });
 }
 

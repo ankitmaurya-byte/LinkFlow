@@ -66,6 +66,54 @@ router.post('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Find-or-create DM group with a friend.
+router.post('/dm', async (req, res, next) => {
+  try {
+    const { userId } = req.body || {};
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      throw new AppError('VALIDATION', 'userId required', 400);
+    }
+    if (userId === req.user.id) {
+      throw new AppError('VALIDATION', 'cannot DM yourself', 400);
+    }
+    // Both users must be friends.
+    const me = new mongoose.Types.ObjectId(req.user.id);
+    const other = new mongoose.Types.ObjectId(userId);
+    const { Friendship } = await import('../models/friendship.js');
+    const pair = Friendship.normalizePair(me, other);
+    const f = await Friendship.findOne({ ...pair, status: 'accepted' });
+    if (!f) throw new AppError('FORBIDDEN', 'Not friends', 403);
+
+    // Find existing 2-person group containing both.
+    const myMems = await GroupMember.find({ userId: me });
+    const ids = myMems.map(m => m.groupId);
+    if (ids.length) {
+      const otherIn = await GroupMember.find({ groupId: { $in: ids }, userId: other });
+      for (const m of otherIn) {
+        const count = await GroupMember.countDocuments({ groupId: m.groupId });
+        if (count === 2) {
+          const g = await Group.findById(m.groupId);
+          if (g) return res.json({ group: publicGroup(g), existed: true });
+        }
+      }
+    }
+    // Create new pairwise group.
+    const otherUser = await User.findById(other).select('username');
+    const meUser = await User.findById(me).select('username');
+    const inviteCode = await generateUniqueCode();
+    const g = await Group.create({
+      name: `DM @${meUser.username} ↔ @${otherUser.username}`,
+      adminId: me,
+      inviteCode
+    });
+    await GroupMember.insertMany([
+      { groupId: g._id, userId: me, role: 'admin' },
+      { groupId: g._id, userId: other, role: 'member' }
+    ]);
+    res.json({ group: publicGroup(g), existed: false });
+  } catch (e) { next(e); }
+});
+
 // Join by invite code (direct join, no admin approval)
 router.post('/join-by-code', async (req, res, next) => {
   try {
@@ -100,7 +148,44 @@ router.get('/', async (req, res, next) => {
     const memberships = await GroupMember.find({ userId: req.user.id });
     const ids = memberships.map(m => m.groupId);
     const groups = await Group.find({ _id: { $in: ids } }).sort({ createdAt: 1 });
-    res.json({ groups: groups.map(publicGroup) });
+
+    // Enrich each group: memberCount + (for 2-person groups) the other user's username.
+    const allMembers = await GroupMember.find({ groupId: { $in: ids } });
+    const byGroup = new Map();
+    for (const m of allMembers) {
+      const k = m.groupId.toString();
+      if (!byGroup.has(k)) byGroup.set(k, []);
+      byGroup.get(k).push(m);
+    }
+    const peerIds = new Set();
+    for (const g of groups) {
+      const ms = byGroup.get(g._id.toString()) || [];
+      if (ms.length === 2) {
+        const peer = ms.find(m => m.userId.toString() !== req.user.id);
+        if (peer) peerIds.add(peer.userId.toString());
+      }
+    }
+    const peers = peerIds.size
+      ? await User.find({ _id: { $in: [...peerIds] } }, { username: 1 })
+      : [];
+    const peerMap = new Map(peers.map(u => [u._id.toString(), u.username]));
+
+    res.json({
+      groups: groups.map(g => {
+        const ms = byGroup.get(g._id.toString()) || [];
+        const isDm = ms.length === 2;
+        let peerUsername = null;
+        if (isDm) {
+          const peer = ms.find(m => m.userId.toString() !== req.user.id);
+          peerUsername = peer ? peerMap.get(peer.userId.toString()) || null : null;
+        }
+        return Object.assign(publicGroup(g), {
+          memberCount: ms.length,
+          isDm,
+          peerUsername
+        });
+      })
+    });
   } catch (e) { next(e); }
 });
 

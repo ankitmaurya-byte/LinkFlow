@@ -4,141 +4,117 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LinkFlow Playground</title>
+  <title>LinkFlow Chats</title>
   <link rel="stylesheet" href="playground.css">
   <link rel="stylesheet" href="../components/login-form.css">
 </head>
 
 <body>
   <div class="playground-container">
-    <div class="main-content">
-      <aside class="sidebar">
-        <nav class="sidebar-nav">
-          <button class="nav-item active" data-view="friends"><span data-icon="users"></span> Friends</button>
-          <button class="nav-item" data-view="groups"><span data-icon="hash"></span> Groups</button>
-          <button class="nav-item" data-view="chat"><span data-icon="message"></span> Chat</button>
-          <button class="nav-item" data-view="share"><span data-icon="share"></span> Share</button>
-        </nav>
+    <div class="ch-app">
+      <aside class="ch-side">
+        <div class="ch-search">
+          <input type="search" id="chSearch" placeholder="Search users or chats…" />
+        </div>
+
+        <section class="ch-section" id="chSearchResults" hidden>
+          <h4>Users</h4>
+          <div id="chSearchList"></div>
+        </section>
+
+        <section class="ch-section" id="chRequests" hidden>
+          <h4>Friend requests</h4>
+          <div id="chRequestList"></div>
+        </section>
+
+        <section class="ch-section">
+          <div class="ch-section-head">
+            <h4>Chats</h4>
+            <button class="ch-new-group" id="chNewGroupBtn" title="New group">+</button>
+          </div>
+          <div id="chChatList"></div>
+        </section>
+
+        <section class="ch-section" id="chJoinSection">
+          <h4>Join group</h4>
+          <div class="ch-join-row">
+            <input type="text" id="chJoinCode" placeholder="Invite code" />
+            <button id="chJoinBtn">Join</button>
+          </div>
+        </section>
       </aside>
 
-      <main class="content-area">
-        <!-- Friends view -->
-        <div class="view" id="friendsView">
-          <div class="view-header">
-            <h2>Friends</h2>
-            <p class="view-description">Add friends by username and accept incoming requests.</p>
-          </div>
-
-          <div class="action-section">
-            <input type="text" id="friendUsernameInput" class="input" placeholder="Friend's username" />
-            <button class="btn btn-primary" id="addFriendBtn">+ Send request</button>
-          </div>
-
-          <div class="section">
-            <h3>Incoming requests</h3>
-            <div id="incomingFriendsList" class="list">
-              <div class="empty-state-small"><p>No incoming requests</p></div>
-            </div>
-          </div>
-
-          <div class="section">
-            <h3>My friends</h3>
-            <div id="friendsList" class="list">
-              <div class="empty-state-small"><p>No friends yet</p></div>
-            </div>
-          </div>
+      <main class="ch-main">
+        <div class="ch-header" id="chHeader">
+          <span>Select or start a chat</span>
         </div>
-
-        <!-- Groups view -->
-        <div class="view hidden" id="groupsView">
-          <div class="view-header">
-            <h2>Groups</h2>
-            <p class="view-description">Create groups, share invite codes, or join with a code.</p>
-          </div>
-
-          <div class="action-section">
-            <input type="text" id="newGroupName" class="input" placeholder="New group name" />
-            <button class="btn btn-primary" id="createGroupBtn">+ Create</button>
-          </div>
-
-          <div class="action-section">
-            <input type="text" id="joinCodeInput" class="input" placeholder="Invite code" />
-            <button class="btn btn-secondary" id="joinByCodeBtn">Join by code</button>
-          </div>
-
-          <div class="section">
-            <h3>My groups</h3>
-            <div id="groupsList" class="list">
-              <div class="empty-state-small"><p>No groups yet</p></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Chat view -->
-        <div class="view hidden chat-view" id="chatView">
-          <div class="chat-sidebar">
-            <h3>Groups</h3>
-            <div id="chatGroupsList" class="list"></div>
-          </div>
-          <div class="chat-main">
-            <div class="chat-header" id="chatHeader">
-              <span>Select a group to start chatting</span>
-            </div>
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-composer" id="chatComposer" hidden>
-              <input type="text" id="chatInput" class="input" placeholder="Type a message…" />
-              <button class="btn btn-primary" id="chatSendBtn">Send</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Share view -->
-        <div class="view hidden" id="shareView">
-          <div class="view-header">
-            <h2>Share Links</h2>
-            <p class="view-description">Send a URL, bookmark, or folder to one or more groups.</p>
-          </div>
-
-          <div class="form-group">
-            <label>What to share</label>
-            <select id="shareKind" class="select">
-              <option value="url">A custom URL</option>
-              <option value="bookmark">Saved bookmark</option>
-              <option value="folder">Folder (with all its links)</option>
-            </select>
-          </div>
-
-          <div class="form-group" id="shareUrlGroup">
-            <label for="shareUrl">URL</label>
-            <input type="url" id="shareUrl" class="input" placeholder="https://example.com" />
-          </div>
-
-          <div class="form-group hidden" id="shareBookmarkGroup">
-            <label for="shareBookmarkSelect">Bookmark</label>
-            <select id="shareBookmarkSelect" class="select"></select>
-          </div>
-
-          <div class="form-group hidden" id="shareFolderGroup">
-            <label for="shareFolderSelect">Folder</label>
-            <select id="shareFolderSelect" class="select"></select>
-          </div>
-
-          <div class="form-group">
-            <label for="shareNote">Optional note</label>
-            <textarea id="shareNote" class="textarea" rows="3" placeholder="Why are you sharing this?"></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Send to (groups)</label>
-            <div id="shareTargets" class="multi-select">
-              <div class="empty-state-small"><p>No groups available. Create or join a group first.</p></div>
-            </div>
-          </div>
-
-          <button class="btn btn-primary" id="sendShareBtn">Send</button>
-          <p class="share-status" id="shareStatus" hidden></p>
+        <div class="ch-messages" id="chMessages"></div>
+        <div class="ch-composer" id="chComposer" hidden>
+          <button class="ch-share-btn" id="chShareBtn" title="Share saved bookmark/folder">🔗</button>
+          <input type="text" id="chInput" placeholder="Type a message…" />
+          <button class="ch-send-btn" id="chSendBtn">Send</button>
         </div>
       </main>
+    </div>
+  </div>
+
+  <!-- New group modal -->
+  <div class="modal" id="newGroupModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">New group</h3>
+        <button class="modal-close" data-modal="newGroupModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="newGroupName">Group name</label>
+          <input type="text" id="newGroupName" class="input" placeholder="e.g. Reading club" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="newGroupModal">Cancel</button>
+        <button class="btn btn-primary" id="newGroupCreateBtn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share-to-chat modal -->
+  <div class="modal" id="shareToChatModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Share to chat</h3>
+        <button class="modal-close" data-modal="shareToChatModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Kind</label>
+          <select id="stcKind" class="select">
+            <option value="url">Custom URL</option>
+            <option value="bookmark">Saved bookmark</option>
+            <option value="folder">Folder (with links)</option>
+          </select>
+        </div>
+        <div class="form-group" id="stcUrlGrp">
+          <label>URL</label>
+          <input type="url" id="stcUrl" class="input" placeholder="https://example.com" />
+        </div>
+        <div class="form-group hidden" id="stcBmGrp">
+          <label>Bookmark</label>
+          <select id="stcBm" class="select"></select>
+        </div>
+        <div class="form-group hidden" id="stcFolderGrp">
+          <label>Folder</label>
+          <select id="stcFolder" class="select"></select>
+        </div>
+        <div class="form-group">
+          <label>Note</label>
+          <textarea id="stcNote" class="textarea" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-modal="shareToChatModal">Cancel</button>
+        <button class="btn btn-primary" id="stcSendBtn">Send</button>
+      </div>
     </div>
   </div>
 

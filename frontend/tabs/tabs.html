@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tabs</title>
+  <link rel="stylesheet" href="tabs.css" />
+</head>
+<body>
+  <div class="tb-app">
+    <header class="tb-tabs">
+      <button class="tb-tab active" data-pane="active">Active</button>
+      <button class="tb-tab" data-pane="sessions">Sessions</button>
+      <button class="tb-tab" data-pane="settings">Snooze</button>
+    </header>
+
+    <main class="tb-main">
+      <!-- Active tabs -->
+      <section class="tb-pane" data-pane="active">
+        <div class="tb-bar">
+          <input type="search" id="tbSearch" placeholder="Filter tabs by title or url" />
+          <button id="tbCloseAll" class="tb-danger">Close all</button>
+        </div>
+        <div class="tb-list" id="tbActiveList"></div>
+      </section>
+
+      <!-- Sessions -->
+      <section class="tb-pane" data-pane="sessions" hidden>
+        <div class="tb-bar">
+          <input type="text" id="tbSessionName" placeholder="Session name" />
+          <button id="tbSaveSession">+ Save current window</button>
+        </div>
+        <div class="tb-list" id="tbSessionList"></div>
+      </section>
+
+      <!-- Snooze settings -->
+      <section class="tb-pane" data-pane="settings" hidden>
+        <div class="tb-set">
+          <label class="tb-row">
+            <input type="checkbox" id="tbSnoozeOn" />
+            <span>Enable tab snooze</span>
+          </label>
+          <label class="tb-row">
+            <span>Default idle minutes:</span>
+            <input type="number" id="tbDefaultMin" min="1" max="10080" style="width:80px;" />
+          </label>
+          <label class="tb-row">
+            <span>Action:</span>
+            <select id="tbAction">
+              <option value="close">Just close</option>
+              <option value="bookmarkAndClose">Bookmark to "Snoozed" then close</option>
+            </select>
+          </label>
+          <h4>Per-host rules</h4>
+          <div class="tb-bar">
+            <input type="text" id="tbHostRuleHost" placeholder="example.com" />
+            <input type="number" id="tbHostRuleMin" placeholder="minutes" min="1" max="10080" style="width:100px;" />
+            <button id="tbAddHostRule">+ Add</button>
+          </div>
+          <div id="tbRulesList" class="tb-rules"></div>
+          <button class="tb-primary" id="tbSaveSnooze" style="margin-top:14px;">Save settings</button>
+          <span id="tbSaveStatus" class="tb-saved"></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Folder picker modal for "bookmark + close" -->
+  <div class="tb-modal" id="tbFolderPicker" hidden>
+    <div class="tb-modal-card">
+      <div class="tb-modal-head">
+        <strong>Save to folder</strong>
+        <button id="tbModalClose">×</button>
+      </div>
+      <div class="tb-modal-body" id="tbFolderTree"></div>
+      <div class="tb-modal-foot">
+        <button id="tbCancelSave">Cancel</button>
+        <button class="tb-primary" id="tbConfirmSave">Save here</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../lib/api.js"></script>
+  <script src="../lib/auth.js"></script>
+  <script src="../lib/dialog.js"></script>
+  <script src="tabs.js"></script>
+</body>
+</html>

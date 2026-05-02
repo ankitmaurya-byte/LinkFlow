@@ -114,7 +114,7 @@ class PopupController {
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       // Lock floating panel close while custom menu open.
-      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
       this.openCustomContextMenu(e);
     });
 
@@ -265,11 +265,13 @@ class PopupController {
     document.getElementById('playgroundView').hidden = mode !== 'playground';
     document.getElementById('settingsView').hidden = mode !== 'settings';
     document.getElementById('notesView').hidden = mode !== 'notes';
+    document.getElementById('tabsView').hidden = mode !== 'tabs';
     if (mode === 'todo') await this.renderTodo();
     else if (mode === 'chats') this.ensureChatsFrame();
     else if (mode === 'playground') await this.renderHub();
     else if (mode === 'settings') await this.renderSettings();
     else if (mode === 'notes') await window.notesController?.open();
+    else if (mode === 'tabs') this.ensureTabsFrame();
     else await this.render();
   }
 
@@ -578,11 +580,11 @@ class PopupController {
       e.dataTransfer.setData('text/task', task.id);
       e.dataTransfer.effectAllowed = 'move';
       card.classList.add('dragging');
-      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
     });
     card.addEventListener('dragend', () => {
       card.classList.remove('dragging');
-      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
     });
 
     card.addEventListener('dblclick', () => {
@@ -915,6 +917,106 @@ class PopupController {
     const row = document.createElement('div');
     row.className = 'col-row' + (selected ? ' selected' : '') + (isFolder ? ' is-folder' : ' is-link');
 
+    // Drag/drop wiring for link + folder rows (skip tabs).
+    if (contextItem && (contextItem.type === 'link' || contextItem.type === 'folder')) {
+      row.draggable = true;
+      const itemId = contextItem.type === 'link' ? contextItem.link.id : contextItem.folder.id;
+      const sourceParentId = contextItem.type === 'link'
+        ? (contextItem.link.folderId || null)
+        : (contextItem.folder.parentId || null);
+      row.addEventListener('dragstart', (e) => {
+        const payload = {
+          kind: contextItem.type,
+          id: itemId,
+          tabId: contextItem.tabId,
+          parentId: sourceParentId
+        };
+        e.dataTransfer.setData('application/x-linkflow', JSON.stringify(payload));
+        e.dataTransfer.effectAllowed = 'move';
+        row.classList.add('dragging');
+        try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+      });
+    }
+
+    // Drop target wiring. Folders + tabs accept drop-into. Every drag-aware row
+    // (link or folder) accepts drop-above / drop-below for in-place reorder.
+    if (contextItem && (contextItem.type === 'link' || contextItem.type === 'folder' || contextItem.type === 'tab')) {
+      const rowTabId = contextItem.tabId;
+      const rowParentId = (contextItem.type === 'folder')
+        ? (contextItem.folder.parentId || null)
+        : (contextItem.type === 'link' ? (contextItem.link.folderId || null) : null);
+      const dropIntoTabId = rowTabId;
+      const dropIntoParentId = (contextItem.type === 'folder') ? contextItem.folder.id
+                              : (contextItem.type === 'tab') ? null : null;
+      const rowItemId = (contextItem.type === 'link') ? contextItem.link.id
+                      : (contextItem.type === 'folder') ? contextItem.folder.id : null;
+
+      row.addEventListener('dragover', (e) => {
+        if (!e.dataTransfer.types.includes('application/x-linkflow')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        row.classList.remove('drop-into', 'drop-above', 'drop-below');
+        const r = row.getBoundingClientRect();
+        const y = e.clientY - r.top;
+        const canDropInto = (contextItem.type === 'folder' || contextItem.type === 'tab');
+        // Edge zones for reorder, middle zone (folder/tab) for drop-into.
+        if (canDropInto && y > 10 && y < r.height - 10) {
+          row.classList.add('drop-into');
+        } else if (y < r.height / 2) {
+          row.classList.add('drop-above');
+        } else {
+          row.classList.add('drop-below');
+        }
+      });
+      row.addEventListener('dragleave', () => {
+        row.classList.remove('drop-into', 'drop-above', 'drop-below');
+      });
+      row.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const mode = row.classList.contains('drop-into') ? 'into'
+                   : row.classList.contains('drop-below') ? 'after' : 'before';
+        row.classList.remove('drop-into', 'drop-above', 'drop-below');
+        let payload;
+        try { payload = JSON.parse(e.dataTransfer.getData('application/x-linkflow')); }
+        catch { return; }
+        if (!payload || !payload.id) return;
+        if (payload.id === rowItemId) return;
+
+        try {
+          if (mode === 'into') {
+            // Move into folder / tab root.
+            if (payload.id === dropIntoParentId) return;
+            if (payload.tabId === dropIntoTabId && (payload.parentId || null) === (dropIntoParentId || null)) return;
+            await storage.moveBookmark(payload.id, dropIntoTabId, dropIntoParentId);
+          } else {
+            // Reorder relative to this row.
+            // Step 1: if source is in different parent or tab, move first.
+            if (payload.tabId !== rowTabId || (payload.parentId || null) !== (rowParentId || null)) {
+              await storage.moveBookmark(payload.id, rowTabId, rowParentId);
+            }
+            // Step 2: rebuild ordered list of siblings, place source above/below row.
+            const allFolders = await storage.getFolders(rowTabId);
+            const allLinks = await storage.getAllLinks(rowTabId);
+            const siblings = []
+              .concat(allFolders.filter(f => (f.parentId || null) === (rowParentId || null)))
+              .concat(allLinks.filter(l => (l.folderId || null) === (rowParentId || null)));
+            // Remove source, insert at desired index.
+            const without = siblings.filter(s => s.id !== payload.id);
+            const targetIdx = without.findIndex(s => s.id === rowItemId);
+            const insertAt = mode === 'after' ? targetIdx + 1 : targetIdx;
+            without.splice(insertAt, 0, { id: payload.id });
+            const orderedIds = without.map(s => s.id);
+            await storage.reorderBookmarks(rowTabId, rowParentId, orderedIds);
+          }
+          await this.render();
+        } catch (err) { uiAlert('Move failed: ' + (err.message || err)); }
+      });
+    }
+
     const ic = document.createElement('span');
     ic.className = 'col-icon';
     if (typeof icon === 'string' && icon.trim().startsWith('<')) ic.innerHTML = icon;
@@ -1108,7 +1210,7 @@ class PopupController {
     });
 
     const releaseLock = () => {
-      try { window.parent?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
     };
     menu.addEventListener('click', releaseLock);
 
@@ -1532,12 +1634,20 @@ class PopupController {
     }
   }
 
+  ensureTabsFrame() {
+    const frame = document.getElementById('tabsFrameInline');
+    if (frame && !frame.src) {
+      frame.src = browser.runtime.getURL('tabs/tabs.html');
+    }
+  }
+
   async renderHub() {
     // Default sub-mode: hub page visible, module pane hidden.
     document.getElementById('hubPage').hidden = false;
     document.getElementById('hubModulePane').hidden = true;
 
     const modules = [
+      { name: 'Tab manager', desc: 'Tabs / sessions / groups / snooze', module: 'tabs/tabs.html' },
       { name: 'Canvas', desc: 'Drawing board', module: 'canvas/canvas.html' },
       { name: 'GitHub explorer', desc: 'Repos, commits, issues, PRs', module: 'github/github.html' },
       { name: 'Feed', desc: 'Posts, comments, likes', module: 'feed/feed.html' },

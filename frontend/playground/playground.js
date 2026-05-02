@@ -1,10 +1,10 @@
-// Playground Controller — Friends / Groups / Chat / Share
+// Chats view — unified list of DMs + group chats with user search + friend requests.
 
-class PlaygroundController {
+class ChatsController {
   constructor() {
-    this.currentView = 'friends';
-    this.selectedChatGroupId = null;
-    this.cachedGroups = [];
+    this.currentChat = null; // { id, isDm, peerUsername, name }
+    this.chats = [];
+    this.searchTimer = null;
     this.init();
   }
 
@@ -12,7 +12,7 @@ class PlaygroundController {
     this.applyEmbedMode();
     if (typeof hydrateIcons === 'function') hydrateIcons();
     this.bindEvents();
-    await this.switchView('friends');
+    await Promise.all([this.loadChats(), this.loadRequests()]);
   }
 
   applyEmbedMode() {
@@ -21,441 +21,330 @@ class PlaygroundController {
   }
 
   bindEvents() {
-    document.querySelectorAll('.nav-item').forEach(btn => {
-      btn.addEventListener('click', () => this.switchView(btn.dataset.view));
+    const search = document.getElementById('chSearch');
+    search.addEventListener('input', () => {
+      if (this.searchTimer) clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(() => this.search(search.value.trim()), 200);
     });
 
-    // Friends
-    document.getElementById('addFriendBtn').addEventListener('click', () => this.sendFriendRequest());
-    document.getElementById('friendUsernameInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.sendFriendRequest();
+    document.getElementById('chSendBtn').addEventListener('click', () => this.send());
+    document.getElementById('chInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.send();
     });
+    document.getElementById('chShareBtn').addEventListener('click', () => this.openShareModal());
 
-    // Groups
-    document.getElementById('createGroupBtn').addEventListener('click', () => this.createGroup());
-    document.getElementById('newGroupName').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.createGroup();
+    document.getElementById('chNewGroupBtn').addEventListener('click', () => {
+      document.getElementById('newGroupName').value = '';
+      modalManager.open('newGroupModal');
     });
-    document.getElementById('joinByCodeBtn').addEventListener('click', () => this.joinByCode());
-    document.getElementById('joinCodeInput').addEventListener('keypress', (e) => {
+    document.getElementById('newGroupCreateBtn').addEventListener('click', () => this.createGroup());
+
+    document.getElementById('chJoinBtn').addEventListener('click', () => this.joinByCode());
+    document.getElementById('chJoinCode').addEventListener('keydown', e => {
       if (e.key === 'Enter') this.joinByCode();
     });
 
-    // Chat
-    document.getElementById('chatSendBtn').addEventListener('click', () => this.sendChatMessage());
-    document.getElementById('chatInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.sendChatMessage();
-    });
-
-    // Share
-    document.getElementById('shareKind').addEventListener('change', () => this.updateShareForm());
-    document.getElementById('sendShareBtn').addEventListener('click', () => this.sendShare());
+    document.getElementById('stcKind').addEventListener('change', () => this.updateShareForm());
+    document.getElementById('stcSendBtn').addEventListener('click', () => this.sendShareToChat());
   }
 
-  async switchView(view) {
-    this.currentView = view;
-    document.querySelectorAll('.nav-item').forEach(b => {
-      b.classList.toggle('active', b.dataset.view === view);
-    });
-    ['friendsView', 'groupsView', 'chatView', 'shareView'].forEach(id => {
-      document.getElementById(id).classList.toggle('hidden', id !== `${view}View`);
-    });
-    if (view === 'friends') await this.loadFriends();
-    else if (view === 'groups') await this.loadGroups();
-    else if (view === 'chat') await this.loadChatGroups();
-    else if (view === 'share') await this.loadShareForm();
+  // === SEARCH ===
+  async search(q) {
+    const wrap = document.getElementById('chSearchResults');
+    const list = document.getElementById('chSearchList');
+    if (!q) { wrap.hidden = true; list.innerHTML = ''; return; }
+    list.innerHTML = '<div class="ch-empty">Searching…</div>';
+    wrap.hidden = false;
+    try {
+      const res = await api.authedFetch('/users/search?q=' + encodeURIComponent(q));
+      const users = res.users || [];
+      list.innerHTML = '';
+      if (!users.length) { list.innerHTML = '<div class="ch-empty">No users found.</div>'; return; }
+      for (const u of users) list.appendChild(this.renderUserResult(u));
+    } catch (err) {
+      list.innerHTML = `<div class="ch-empty">Failed: ${esc(err.message || err)}</div>`;
+    }
   }
 
-  // === FRIENDS ===
-  async sendFriendRequest() {
-    const input = document.getElementById('friendUsernameInput');
-    const username = input.value.trim().toLowerCase();
-    if (!username) return;
+  renderUserResult(u) {
+    const row = document.createElement('div');
+    row.className = 'ch-user-row';
+    let actionLabel = 'Send request';
+    let actionHandler;
+    if (u.status === 'friend') { actionLabel = 'Chat'; actionHandler = () => this.openDM(u); }
+    else if (u.status === 'requested') { actionLabel = 'Requested'; }
+    else if (u.status === 'incoming') { actionLabel = 'Accept'; actionHandler = () => this.acceptRequestByUsername(u.username); }
+    else { actionHandler = () => this.sendFriendRequest(u.username); }
+    row.innerHTML = `
+      <div class="ch-avatar">${esc(initial(u.username))}</div>
+      <div class="ch-user-name">@${esc(u.username)}</div>
+      <button class="ch-user-act ${actionHandler ? '' : 'disabled'}">${esc(actionLabel)}</button>
+    `;
+    if (actionHandler) row.querySelector('button').addEventListener('click', actionHandler);
+    return row;
+  }
+
+  async sendFriendRequest(username) {
     try {
       await api.authedFetch('/friends/request', { method: 'POST', body: { username } });
-      input.value = '';
-      await uiAlert('Friend request sent.');
-      await this.loadFriends();
-    } catch (err) {
-      await uiAlert(err.message || 'Failed to send request');
-    }
+      uiAlert('Friend request sent.');
+      this.search(document.getElementById('chSearch').value.trim());
+    } catch (err) { uiAlert(err.message || 'Failed'); }
   }
 
-  async loadFriends() {
+  // === FRIEND REQUESTS (incoming) ===
+  async loadRequests() {
+    const wrap = document.getElementById('chRequests');
+    const list = document.getElementById('chRequestList');
     try {
-      const [reqs, friends] = await Promise.all([
-        api.authedFetch('/friends/requests'),
-        api.authedFetch('/friends')
-      ]);
-      this.renderIncoming(reqs.incoming || []);
-      this.renderFriends(friends.friends || []);
-    } catch (err) {
-      console.error(err);
-    }
+      const res = await api.authedFetch('/friends/requests');
+      const incoming = res.incoming || [];
+      if (!incoming.length) { wrap.hidden = true; return; }
+      wrap.hidden = false;
+      // Need usernames — search route exposes them; fetch each via reverse — easier: pull /friends + match. Simpler: show id.
+      // Re-render with placeholder; usernames not exposed in /friends/requests yet.
+      list.innerHTML = '';
+      for (const r of incoming) {
+        const row = document.createElement('div');
+        row.className = 'ch-req-row';
+        row.innerHTML = `
+          <div class="ch-avatar">?</div>
+          <div class="ch-user-name">user <code>${esc(r.requesterId.slice(-6))}</code></div>
+          <button class="ch-user-act" data-act="accept">Accept</button>
+          <button class="ch-user-act danger" data-act="reject">Reject</button>
+        `;
+        row.querySelector('[data-act="accept"]').addEventListener('click', async () => {
+          try {
+            await api.authedFetch(`/friends/${r.id}/accept`, { method: 'POST' });
+            await this.loadRequests();
+          } catch (err) { uiAlert(err.message); }
+        });
+        row.querySelector('[data-act="reject"]').addEventListener('click', async () => {
+          try {
+            await api.authedFetch(`/friends/${r.id}/reject`, { method: 'POST' });
+            await this.loadRequests();
+          } catch (err) { uiAlert(err.message); }
+        });
+        list.appendChild(row);
+      }
+    } catch (_) { wrap.hidden = true; }
   }
 
-  async renderIncoming(list) {
-    const wrap = document.getElementById('incomingFriendsList');
-    wrap.replaceChildren();
-    if (list.length === 0) {
-      wrap.innerHTML = '<div class="empty-state-small"><p>No incoming requests</p></div>';
-      return;
-    }
-    // Need usernames — fetch via fallback (not currently exposed).
-    for (const f of list) {
-      const row = document.createElement('div');
-      row.className = 'list-row';
-      row.innerHTML = `
-        <span>Request from user <code>${f.requesterId}</code></span>
-        <button class="btn btn-sm btn-primary" data-act="accept">Accept</button>
-      `;
-      row.querySelector('[data-act="accept"]').addEventListener('click', async () => {
-        try {
-          await api.authedFetch(`/friends/${f.id}/accept`, { method: 'POST' });
-          await this.loadFriends();
-        } catch (err) { await uiAlert(err.message); }
-      });
-      wrap.appendChild(row);
-    }
+  async acceptRequestByUsername(_username) {
+    // Fallback path — tell user to use the requests list section.
+    uiAlert('See "Friend requests" section above to accept.');
   }
 
-  renderFriends(list) {
-    const wrap = document.getElementById('friendsList');
-    wrap.replaceChildren();
-    if (list.length === 0) {
-      wrap.innerHTML = '<div class="empty-state-small"><p>No friends yet</p></div>';
-      return;
-    }
-    for (const f of list) {
-      const row = document.createElement('div');
-      row.className = 'list-row';
-      const name = document.createElement('span');
-      name.textContent = `@${f.username}`;
-      const remove = document.createElement('button');
-      remove.className = 'btn btn-sm btn-danger-outline';
-      remove.textContent = 'Remove';
-      // Removal needs friendship id — not in `/friends` response. Skip for now.
-      remove.disabled = true;
-      remove.title = 'Friend removal not yet wired';
-      row.append(name, remove);
-      wrap.appendChild(row);
-    }
-  }
-
-  // === GROUPS ===
-  async createGroup() {
-    const input = document.getElementById('newGroupName');
-    const name = input.value.trim();
-    if (!name) return;
-    try {
-      const res = await api.authedFetch('/groups', { method: 'POST', body: { name } });
-      input.value = '';
-      await this.loadGroups();
-      await uiAlert(`Group created. Invite code: ${res.group.inviteCode}`);
-    } catch (err) {
-      await uiAlert(err.message || 'Failed');
-    }
-  }
-
-  async joinByCode() {
-    const input = document.getElementById('joinCodeInput');
-    const code = input.value.trim().toUpperCase();
-    if (!code) return;
-    try {
-      const res = await api.authedFetch('/groups/join-by-code', { method: 'POST', body: { code } });
-      input.value = '';
-      if (res.alreadyMember) await uiAlert(`Already a member of "${res.group.name}".`);
-      else await uiAlert(`Joined "${res.group.name}".`);
-      await this.loadGroups();
-    } catch (err) {
-      await uiAlert(err.message || 'Failed');
-    }
-  }
-
-  async loadGroups() {
+  // === CHAT LIST ===
+  async loadChats() {
+    const list = document.getElementById('chChatList');
+    list.innerHTML = '<div class="ch-empty">Loading…</div>';
     try {
       const res = await api.authedFetch('/groups');
-      this.cachedGroups = res.groups || [];
-      this.renderGroups(this.cachedGroups);
+      this.chats = res.groups || [];
+      list.innerHTML = '';
+      if (!this.chats.length) { list.innerHTML = '<div class="ch-empty">No chats yet.</div>'; return; }
+      for (const g of this.chats) list.appendChild(this.renderChatRow(g));
     } catch (err) {
-      console.error(err);
+      list.innerHTML = `<div class="ch-empty">Failed: ${esc(err.message || err)}</div>`;
     }
   }
 
-  renderGroups(list) {
-    const wrap = document.getElementById('groupsList');
-    wrap.replaceChildren();
-    if (list.length === 0) {
-      wrap.innerHTML = '<div class="empty-state-small"><p>No groups yet</p></div>';
-      return;
-    }
-    for (const g of list) {
-      const row = document.createElement('div');
-      row.className = 'list-row group-row';
-      row.innerHTML = `
-        <div class="group-row-main">
-          <strong>${escapeText(g.name)}</strong>
-          <div class="group-meta">Invite: <code class="invite-code">${g.inviteCode || '—'}</code></div>
-        </div>
-        <button class="btn btn-sm btn-outline" data-act="copy">Copy code</button>
-        <button class="btn btn-sm btn-secondary" data-act="chat">Open chat</button>
-      `;
-      row.querySelector('[data-act="copy"]').addEventListener('click', async () => {
-        if (!g.inviteCode) return;
-        try { await navigator.clipboard.writeText(g.inviteCode); } catch (_) {}
-      });
-      row.querySelector('[data-act="chat"]').addEventListener('click', () => {
-        this.selectedChatGroupId = g.id;
-        this.switchView('chat');
-      });
-      wrap.appendChild(row);
-    }
+  renderChatRow(g) {
+    const row = document.createElement('div');
+    row.className = 'ch-chat-row' + (this.currentChat?.id === g.id ? ' selected' : '');
+    const label = g.isDm && g.peerUsername ? '@' + g.peerUsername : g.name;
+    const subtitle = g.isDm ? 'direct message' : `${g.memberCount || ''} members`;
+    row.innerHTML = `
+      <div class="ch-avatar ${g.isDm ? 'dm' : ''}">${esc(initial(label))}</div>
+      <div class="ch-chat-info">
+        <div class="ch-chat-name">${esc(label)}</div>
+        <div class="ch-chat-sub">${esc(subtitle)}</div>
+      </div>
+    `;
+    row.addEventListener('click', () => this.openChat(g));
+    return row;
   }
 
-  // === CHAT ===
-  async loadChatGroups() {
+  // === DM open: ensures pairwise group, opens chat ===
+  async openDM(user) {
     try {
-      const res = await api.authedFetch('/groups');
-      this.cachedGroups = res.groups || [];
-    } catch (err) {
-      console.error(err);
-    }
-    const wrap = document.getElementById('chatGroupsList');
-    wrap.replaceChildren();
-    if (this.cachedGroups.length === 0) {
-      wrap.innerHTML = '<div class="empty-state-small"><p>No groups</p></div>';
-      return;
-    }
-    for (const g of this.cachedGroups) {
-      const row = document.createElement('div');
-      row.className = 'list-row chat-group-row' + (g.id === this.selectedChatGroupId ? ' selected' : '');
-      row.textContent = g.name;
-      row.addEventListener('click', () => {
-        this.selectedChatGroupId = g.id;
-        this.loadChatGroups();
-        this.loadChatMessages();
-      });
-      wrap.appendChild(row);
-    }
-    if (this.selectedChatGroupId) await this.loadChatMessages();
+      const res = await api.authedFetch('/groups/dm', { method: 'POST', body: { userId: user.id } });
+      // refresh list and open
+      await this.loadChats();
+      const g = this.chats.find(x => x.id === res.group.id) || res.group;
+      this.openChat(g);
+    } catch (err) { uiAlert(err.message || 'DM failed'); }
   }
 
-  async loadChatMessages() {
-    const header = document.getElementById('chatHeader');
-    const composer = document.getElementById('chatComposer');
-    const messagesEl = document.getElementById('chatMessages');
-    if (!this.selectedChatGroupId) {
-      header.textContent = 'Select a group';
-      composer.hidden = true;
-      messagesEl.replaceChildren();
-      return;
-    }
-    const g = this.cachedGroups.find(g => g.id === this.selectedChatGroupId);
-    header.textContent = g ? g.name : 'Chat';
-    composer.hidden = false;
+  async openChat(g) {
+    this.currentChat = g;
+    document.querySelectorAll('.ch-chat-row').forEach(r => r.classList.toggle('selected', r === arguments[0]));
+    // Re-render list to update selected style
+    const list = document.getElementById('chChatList');
+    list.innerHTML = '';
+    for (const c of this.chats) list.appendChild(this.renderChatRow(c));
+
+    const head = document.getElementById('chHeader');
+    head.textContent = g.isDm && g.peerUsername ? '@' + g.peerUsername : g.name;
+    document.getElementById('chComposer').hidden = false;
+    await this.loadMessages();
+  }
+
+  async loadMessages() {
+    const wrap = document.getElementById('chMessages');
+    if (!this.currentChat) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = '<div class="ch-empty">Loading…</div>';
     try {
-      const res = await api.authedFetch(`/groups/${this.selectedChatGroupId}/chat?limit=100`);
+      const res = await api.authedFetch(`/groups/${this.currentChat.id}/chat?limit=100`);
       this.renderMessages(res.messages || []);
     } catch (err) {
-      console.error(err);
+      wrap.innerHTML = `<div class="ch-empty">Failed: ${esc(err.message || err)}</div>`;
     }
   }
 
   renderMessages(list) {
-    const wrap = document.getElementById('chatMessages');
-    wrap.replaceChildren();
-    const me = (auth.getCurrentUser ? null : null); // placeholder
+    const wrap = document.getElementById('chMessages');
+    wrap.innerHTML = '';
     for (const m of list) {
       const card = document.createElement('div');
-      card.className = 'chat-msg';
-      const sender = document.createElement('div');
-      sender.className = 'chat-sender';
-      sender.textContent = `@${m.senderUsername || m.senderId.slice(-4)}`;
-      const body = document.createElement('div');
-      body.className = 'chat-body';
-      if (m.kind === 'text') {
-        body.textContent = m.text || '';
-      } else if (m.kind === 'url') {
-        const a = document.createElement('a');
-        a.href = m.url;
-        a.target = '_blank';
-        a.rel = 'noopener';
-        a.textContent = m.title || m.url;
-        body.appendChild(a);
-        if (m.text) {
-          const note = document.createElement('div');
-          note.className = 'chat-note';
-          note.textContent = m.text;
-          body.appendChild(note);
-        }
+      card.className = 'ch-msg';
+      const sender = `@${m.senderUsername || '?'}`;
+      let bodyHtml = '';
+      if (m.kind === 'text') bodyHtml = esc(m.text || '');
+      else if (m.kind === 'url') {
+        bodyHtml = `<a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title || m.url)}</a>`;
+        if (m.text) bodyHtml += `<div class="ch-msg-note">${esc(m.text)}</div>`;
       } else if (m.kind === 'folder') {
-        body.textContent = `Folder: ${m.title || ''}`;
-        if (m.payload && Array.isArray(m.payload.links)) {
-          const ul = document.createElement('ul');
-          ul.style.marginTop = '6px';
-          for (const link of m.payload.links) {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.href = link.url;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.textContent = link.title || link.url;
-            li.appendChild(a);
-            ul.appendChild(li);
-          }
-          body.appendChild(ul);
+        bodyHtml = `📁 <strong>${esc(m.title || 'Folder')}</strong>`;
+        if (m.payload?.links?.length) {
+          bodyHtml += '<ul class="ch-msg-links">' +
+            m.payload.links.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title || l.url)}</a></li>`).join('') +
+            '</ul>';
         }
       } else if (m.kind === 'bookmark') {
-        const a = document.createElement('a');
-        a.href = m.url || '#';
-        a.target = '_blank';
-        a.rel = 'noopener';
-        a.textContent = `${m.title || m.url || 'Bookmark'}`;
-        body.appendChild(a);
+        bodyHtml = `🔖 <a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title || m.url)}</a>`;
       }
-      const ts = document.createElement('div');
-      ts.className = 'chat-time';
-      ts.textContent = new Date(m.createdAt).toLocaleString();
-      card.append(sender, body, ts);
+      card.innerHTML = `
+        <div class="ch-msg-sender">${esc(sender)}</div>
+        <div class="ch-msg-body">${bodyHtml}</div>
+        <div class="ch-msg-time">${esc(new Date(m.createdAt).toLocaleString())}</div>
+      `;
       wrap.appendChild(card);
     }
     wrap.scrollTop = wrap.scrollHeight;
   }
 
-  async sendChatMessage() {
-    const input = document.getElementById('chatInput');
+  async send() {
+    const input = document.getElementById('chInput');
     const text = input.value.trim();
-    if (!text || !this.selectedChatGroupId) return;
+    if (!text || !this.currentChat) return;
     try {
-      await api.authedFetch(`/groups/${this.selectedChatGroupId}/chat`, {
-        method: 'POST',
-        body: { kind: 'text', text }
+      await api.authedFetch(`/groups/${this.currentChat.id}/chat`, {
+        method: 'POST', body: { kind: 'text', text }
       });
       input.value = '';
-      await this.loadChatMessages();
-    } catch (err) {
-      await uiAlert(err.message);
-    }
+      await this.loadMessages();
+    } catch (err) { uiAlert(err.message); }
   }
 
-  // === SHARE ===
-  updateShareForm() {
-    const kind = document.getElementById('shareKind').value;
-    document.getElementById('shareUrlGroup').classList.toggle('hidden', kind !== 'url');
-    document.getElementById('shareBookmarkGroup').classList.toggle('hidden', kind !== 'bookmark');
-    document.getElementById('shareFolderGroup').classList.toggle('hidden', kind !== 'folder');
-  }
-
-  async loadShareForm() {
-    this.updateShareForm();
+  // === GROUP create + join ===
+  async createGroup() {
+    const name = document.getElementById('newGroupName').value.trim();
+    if (!name) return;
     try {
-      const res = await api.authedFetch('/groups');
-      this.cachedGroups = res.groups || [];
-    } catch (err) { console.error(err); }
-    this.renderShareTargets();
-    await this.populateShareSelectors();
+      const res = await api.authedFetch('/groups', { method: 'POST', body: { name } });
+      modalManager.close('newGroupModal');
+      uiAlert(`Group created. Invite code: ${res.group.inviteCode}`);
+      await this.loadChats();
+    } catch (err) { uiAlert(err.message); }
   }
 
-  renderShareTargets() {
-    const wrap = document.getElementById('shareTargets');
-    wrap.replaceChildren();
-    if (this.cachedGroups.length === 0) {
-      wrap.innerHTML = '<div class="empty-state-small"><p>No groups available. Create or join a group first.</p></div>';
-      return;
-    }
-    for (const g of this.cachedGroups) {
-      const label = document.createElement('label');
-      label.className = 'multi-select-row';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = g.id;
-      cb.dataset.kind = 'group';
-      const span = document.createElement('span');
-      span.textContent = g.name;
-      label.append(cb, span);
-      wrap.appendChild(label);
-    }
+  async joinByCode() {
+    const codeEl = document.getElementById('chJoinCode');
+    const code = codeEl.value.trim().toUpperCase();
+    if (!code) return;
+    try {
+      const res = await api.authedFetch('/groups/join-by-code', { method: 'POST', body: { code } });
+      codeEl.value = '';
+      uiAlert(res.alreadyMember ? `Already in "${res.group.name}".` : `Joined "${res.group.name}".`);
+      await this.loadChats();
+    } catch (err) { uiAlert(err.message); }
   }
 
-  async populateShareSelectors() {
-    const tabs = await storage.getTabs();
-    const bmSel = document.getElementById('shareBookmarkSelect');
-    const folSel = document.getElementById('shareFolderSelect');
+  // === SHARE-to-chat (URL / bookmark / folder) ===
+  async openShareModal() {
+    if (!this.currentChat) { uiAlert('Open a chat first.'); return; }
+    const bmSel = document.getElementById('stcBm');
+    const folSel = document.getElementById('stcFolder');
     bmSel.replaceChildren();
     folSel.replaceChildren();
-
-    for (const tab of tabs) {
-      const links = await storage.getAllLinks(tab.id);
-      const folders = await storage.getFolders(tab.id);
-      for (const l of links) {
-        const opt = new Option(`[${tab.name}] ${l.title}`, JSON.stringify({ tabId: tab.id, id: l.id, url: l.url, title: l.title, platform: l.platform }));
-        bmSel.add(opt);
+    try {
+      const tabs = await storage.getTabs();
+      for (const tab of tabs) {
+        const links = await storage.getAllLinks(tab.id);
+        const folders = await storage.getFolders(tab.id);
+        for (const l of links) {
+          bmSel.add(new Option(`${l.title || l.url}`, JSON.stringify({ tabId: tab.id, id: l.id, url: l.url, title: l.title, platform: l.platform })));
+        }
+        for (const f of folders) {
+          folSel.add(new Option(`${f.name}`, JSON.stringify({ tabId: tab.id, id: f.id, name: f.name })));
+        }
       }
-      for (const f of folders) {
-        const opt = new Option(`[${tab.name}] / ${f.name}`, JSON.stringify({ tabId: tab.id, id: f.id, name: f.name }));
-        folSel.add(opt);
-      }
-    }
+    } catch (_) {}
+    document.getElementById('stcUrl').value = '';
+    document.getElementById('stcNote').value = '';
+    this.updateShareForm();
+    modalManager.open('shareToChatModal');
   }
 
-  async sendShare() {
-    const status = document.getElementById('shareStatus');
-    status.hidden = true;
-    const kind = document.getElementById('shareKind').value;
-    const note = document.getElementById('shareNote').value.trim();
+  updateShareForm() {
+    const k = document.getElementById('stcKind').value;
+    document.getElementById('stcUrlGrp').classList.toggle('hidden', k !== 'url');
+    document.getElementById('stcBmGrp').classList.toggle('hidden', k !== 'bookmark');
+    document.getElementById('stcFolderGrp').classList.toggle('hidden', k !== 'folder');
+  }
 
-    const targets = Array.from(document.querySelectorAll('#shareTargets input[type="checkbox"]:checked'));
-    if (targets.length === 0) {
-      await uiAlert('Select at least one target group.');
-      return;
-    }
-    const groupIds = targets.map(t => t.value);
-
-    let body = { groupIds, text: note || null };
+  async sendShareToChat() {
+    if (!this.currentChat) return;
+    const kind = document.getElementById('stcKind').value;
+    const note = document.getElementById('stcNote').value.trim();
+    let body = { kind, text: note || null };
     if (kind === 'url') {
-      const url = document.getElementById('shareUrl').value.trim();
-      if (!url) { await uiAlert('URL required'); return; }
-      body.kind = 'url';
+      const url = document.getElementById('stcUrl').value.trim();
+      if (!url) { uiAlert('URL required'); return; }
       body.url = url;
       body.title = url;
     } else if (kind === 'bookmark') {
-      const sel = document.getElementById('shareBookmarkSelect').value;
-      if (!sel) { await uiAlert('Pick a bookmark'); return; }
+      const sel = document.getElementById('stcBm').value;
+      if (!sel) { uiAlert('Pick a bookmark'); return; }
       const bm = JSON.parse(sel);
-      body.kind = 'bookmark';
-      body.url = bm.url;
-      body.title = bm.title;
-      body.platform = bm.platform;
+      body.url = bm.url; body.title = bm.title; body.platform = bm.platform;
     } else if (kind === 'folder') {
-      const sel = document.getElementById('shareFolderSelect').value;
-      if (!sel) { await uiAlert('Pick a folder'); return; }
+      const sel = document.getElementById('stcFolder').value;
+      if (!sel) { uiAlert('Pick a folder'); return; }
       const fol = JSON.parse(sel);
       const allLinks = await storage.getAllLinks(fol.tabId);
       const folderLinks = allLinks.filter(l => l.folderId === fol.id);
-      body.kind = 'folder';
       body.title = fol.name;
       body.payload = {
         folderId: fol.id,
         links: folderLinks.map(l => ({ title: l.title, url: l.url, platform: l.platform }))
       };
     }
-
     try {
-      const res = await api.authedFetch('/share', { method: 'POST', body });
-      status.hidden = false;
-      status.textContent = `Shared with ${res.shared.length} group${res.shared.length === 1 ? '' : 's'}.`;
-    } catch (err) {
-      await uiAlert(err.message || 'Share failed');
-    }
+      await api.authedFetch(`/groups/${this.currentChat.id}/chat`, { method: 'POST', body });
+      modalManager.close('shareToChatModal');
+      await this.loadMessages();
+    } catch (err) { uiAlert(err.message); }
   }
 }
 
-function escapeText(s) {
-  const div = document.createElement('div');
-  div.textContent = s == null ? '' : String(s);
-  return div.innerHTML;
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
 }
+function initial(s) { return (s || '?').charAt(0).toUpperCase(); }
 
-document.addEventListener('DOMContentLoaded', () => {
-  new PlaygroundController();
-});
+document.addEventListener('DOMContentLoaded', () => new ChatsController());

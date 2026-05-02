@@ -68,6 +68,18 @@ router.post('/:id/accept', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.post('/:id/reject', async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) throw new AppError('NOT_FOUND', 'Not found', 404);
+    const me = new mongoose.Types.ObjectId(req.user.id);
+    const f = await Friendship.findById(req.params.id);
+    if (!f) throw new AppError('NOT_FOUND', 'Not found', 404);
+    if (!(f.userA.equals(me) || f.userB.equals(me))) throw new AppError('NOT_FOUND', 'Not found', 404);
+    await f.deleteOne();
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
 router.get('/', async (req, res, next) => {
   try {
     const me = new mongoose.Types.ObjectId(req.user.id);

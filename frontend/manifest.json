@@ -22,7 +22,8 @@
     "activeTab",
     "unlimitedStorage",
     "bookmarks",
-    "alarms"
+    "alarms",
+    "tabGroups"
   ],
   "host_permissions": [
     "http://localhost:4000/*"
@@ -68,7 +69,8 @@
         "timer/*",
         "blogs/*",
         "newsletters/*",
-        "startups/*"
+        "startups/*",
+        "tabs/*"
       ],
       "matches": ["<all_urls>"]
     }

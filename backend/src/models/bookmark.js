@@ -7,7 +7,8 @@ const schema = new mongoose.Schema({
   kind: { type: String, enum: ['folder', 'link'], required: true },
   name: { type: String, required: true, trim: true, maxlength: 200 },
   url: { type: String, default: null, maxlength: 4096 },
-  platform: { type: String, default: null, maxlength: 64 }
+  platform: { type: String, default: null, maxlength: 64 },
+  position: { type: Number, default: 0 }
 }, { timestamps: { createdAt: true, updatedAt: false } });
 
 schema.pre('validate', function (next) {

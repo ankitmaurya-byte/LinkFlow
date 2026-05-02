@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -c /home/ankit/Public/codes/extension/bookmark/frontend/tabs/tabs.js)"
+    ]
+  }
+}

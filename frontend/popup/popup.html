@@ -23,6 +23,10 @@
         <span class="side-icon" data-icon="edit"></span>
         <span class="side-label">Notes</span>
       </button>
+      <button class="side-item" data-view="tabs" title="Tabs">
+        <span class="side-icon" data-icon="grid"></span>
+        <span class="side-label">Tabs</span>
+      </button>
       <div class="side-spacer"></div>
       <button class="side-item" data-view="chats" title="Chats">
         <span class="side-icon" data-icon="message"></span>
@@ -143,6 +147,11 @@
         <main class="notes-editor" id="notesEditor">
           <div class="notes-empty">Select or create a note</div>
         </main>
+      </div>
+
+      <!-- Tabs view -->
+      <div class="view-tabs" id="tabsView" hidden>
+        <iframe class="tabs-frame-inline" id="tabsFrameInline" title="Tabs"></iframe>
       </div>
 
       <!-- Settings view -->

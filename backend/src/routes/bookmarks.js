@@ -17,6 +17,7 @@ function publicBookmark(b) {
     name: b.name,
     url: b.url,
     platform: b.platform,
+    position: b.position || 0,
     createdAt: b.createdAt
   };
 }
@@ -45,8 +46,37 @@ router.get('/', async (req, res, next) => {
     const filter = { ownerId: req.user.id };
     if ('parentId' in req.query) filter.parentId = parseObjectId(req.query.parentId, 'parentId');
     if (typeof req.query.tab === 'string' && req.query.tab) filter.tab = req.query.tab;
-    const list = await Bookmark.find(filter).sort({ createdAt: 1 });
+    const list = await Bookmark.find(filter).sort({ position: 1, createdAt: 1 });
     res.json({ bookmarks: list.map(publicBookmark) });
+  } catch (e) { next(e); }
+});
+
+router.post('/reorder', async (req, res, next) => {
+  try {
+    const { tab, parentId, orderedIds } = req.body || {};
+    if (typeof tab !== 'string' || !tab.trim()) {
+      throw new AppError('VALIDATION', 'tab required', 400);
+    }
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      throw new AppError('VALIDATION', 'orderedIds required', 400);
+    }
+    const pid = parseObjectId(parentId, 'parentId');
+    // Verify all ids belong to user + same tab + same parent.
+    const ids = orderedIds.filter(mongoose.isValidObjectId).map(id => new mongoose.Types.ObjectId(id));
+    const docs = await Bookmark.find({
+      _id: { $in: ids },
+      ownerId: req.user.id,
+      tab: tab.trim(),
+      parentId: pid
+    });
+    if (docs.length !== ids.length) {
+      throw new AppError('VALIDATION', 'some ids do not match parent/tab/owner', 400);
+    }
+    const ops = ids.map((id, idx) => ({
+      updateOne: { filter: { _id: id }, update: { $set: { position: idx } } }
+    }));
+    await Bookmark.bulkWrite(ops);
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 

@@ -165,6 +165,22 @@ class StorageManager {
     this.invalidate();
   }
 
+  async moveBookmark(bookmarkId, toTabId, toParentId = null) {
+    await api.authedFetch(`/bookmarks/${bookmarkId}`, {
+      method: 'PATCH',
+      body: { tab: toTabId, parentId: toParentId }
+    });
+    this.invalidate();
+  }
+
+  async reorderBookmarks(tabId, parentId, orderedIds) {
+    await api.authedFetch('/bookmarks/reorder', {
+      method: 'POST',
+      body: { tab: tabId, parentId: parentId || null, orderedIds }
+    });
+    this.invalidate();
+  }
+
   // === CURRENT VIEW (local cache only) ===
   async getCurrentView() {
     const { currentView } = await this._get(['currentView']);

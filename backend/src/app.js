@@ -14,6 +14,7 @@ import { router as featureRequestsRouter } from './routes/featureRequests.js';
 import { router as feedRouter } from './routes/feed.js';
 import { router as blogsRouter, publicRouter as blogsPublicRouter } from './routes/blogs.js';
 import { router as subsRouter } from './routes/subscriptions.js';
+import { router as usersRouter } from './routes/users.js';
 
 export function createApp() {
   const app = express();
@@ -39,6 +40,7 @@ export function createApp() {
   app.use('/blogs', blogsRouter);
   app.use('/public/blogs', blogsPublicRouter);
   app.use('/subscriptions', subsRouter);
+  app.use('/users', usersRouter);
 
   app.use(notFound);
   app.use(errorHandler);
