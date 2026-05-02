@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LinkFlow Canvas</title>
+  <link rel="stylesheet" href="canvas.css" />
+</head>
+<body>
+  <div class="cv-app">
+    <aside class="cv-tools">
+      <button class="cv-tool" data-tool="select" title="Select">↖</button>
+      <button class="cv-tool active" data-tool="pen" title="Pen">✎</button>
+      <button class="cv-tool" data-tool="rect" title="Rectangle">▭</button>
+      <button class="cv-tool" data-tool="ellipse" title="Ellipse">◯</button>
+      <button class="cv-tool" data-tool="line" title="Line">/</button>
+      <button class="cv-tool" data-tool="arrow" title="Arrow">→</button>
+      <button class="cv-tool" data-tool="text" title="Text">T</button>
+      <button class="cv-tool" data-tool="eraser" title="Eraser">⌫</button>
+      <div class="cv-sep"></div>
+      <label class="cv-color" title="Stroke color">
+        <input type="color" id="cvColor" value="#181d26" />
+      </label>
+      <label class="cv-color" title="Fill color">
+        <input type="color" id="cvFill" value="#ffffff00" />
+      </label>
+      <label class="cv-thick" title="Stroke width">
+        <input type="range" id="cvWidth" min="1" max="20" value="2" />
+      </label>
+      <div class="cv-sep"></div>
+      <button class="cv-btn" id="cvUndo" title="Undo">↶</button>
+      <button class="cv-btn" id="cvRedo" title="Redo">↷</button>
+      <button class="cv-btn" id="cvClear" title="Clear">🗑</button>
+      <button class="cv-btn" id="cvExport" title="Export PNG">⤓</button>
+    </aside>
+    <main class="cv-stage">
+      <canvas id="cvCanvas"></canvas>
+      <div id="cvTextEditor" class="cv-text-editor" hidden contenteditable="true"></div>
+    </main>
+  </div>
+  <script src="canvas.js"></script>
+</body>
+</html>

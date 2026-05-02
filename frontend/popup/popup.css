@@ -1238,6 +1238,93 @@ body.embed-mode {
 }
 .note-table-ctrls { display: flex; gap: 6px; margin-top: 4px; }
 
+/* Playground hub */
+.view-hub { flex: 1; overflow: auto; padding: 16px 24px; }
+.view-hub[hidden] { display: none !important; }
+.hub-page { max-width: 720px; }
+.hub-h { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+.hub-subtitle { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+.hub-section { margin-bottom: 28px; }
+.hub-section h3 { font-size: 14px; color: var(--body); margin-bottom: 10px; font-weight: 500; }
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.hub-card {
+  border: 1px solid var(--hairline);
+  padding: 12px;
+  background: var(--canvas);
+  position: relative;
+}
+.hub-card.soon { opacity: 0.7; cursor: not-allowed; }
+.hub-card-desc { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.hub-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 11px;
+  background: var(--surface-strong);
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hub-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+.hub-card.live { cursor: pointer; }
+.hub-card.live:hover { border-color: var(--ink); background: var(--surface-soft); }
+.live-badge { background: var(--signature-mint) !important; color: var(--ink) !important; }
+
+.hub-module-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+}
+.hub-module-pane[hidden] { display: none; }
+.view-hub { position: relative; }
+.hub-module-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+.hub-module-title { font-weight: 500; }
+.hub-module-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}
+
+.fr-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  margin-bottom: 8px;
+}
+.fr-main { flex: 1; }
+.fr-desc { font-size: 13px; color: var(--body); margin-top: 2px; }
+.fr-time { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.fr-status {
+  font-size: 11px;
+  padding: 3px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--surface-strong);
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.fr-pending { background: var(--surface-strong); }
+.fr-planned { background: var(--signature-cream); }
+.fr-in-progress { background: var(--signature-mint); }
+.fr-done { background: var(--signature-forest); color: var(--canvas); }
+.fr-rejected { background: var(--signature-coral); color: var(--canvas); }
+
 /* Settings page */
 .view-settings {
   flex: 1;

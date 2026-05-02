@@ -1,0 +1,65 @@
+html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+.cv-app {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background: #ffffff;
+  color: #181d26;
+}
+.cv-tools {
+  flex: 0 0 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 6px;
+  border-right: 1px solid #dddddd;
+  background: #f8fafc;
+}
+.cv-tool, .cv-btn {
+  width: 40px;
+  height: 36px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #181d26;
+}
+.cv-tool:hover, .cv-btn:hover { background: #e0e2e6; }
+.cv-tool.active { background: #181d26; color: #ffffff; }
+.cv-sep { height: 1px; background: #dddddd; margin: 6px 0; }
+.cv-color, .cv-thick {
+  width: 40px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.cv-color input { width: 100%; height: 100%; border: 0; padding: 0; cursor: pointer; background: transparent; }
+.cv-thick input { width: 100%; }
+.cv-stage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#cvCanvas {
+  display: block;
+  background: #ffffff;
+  cursor: crosshair;
+  width: 100%;
+  height: 100%;
+}
+.cv-text-editor {
+  position: absolute;
+  min-width: 40px;
+  min-height: 24px;
+  padding: 2px 4px;
+  border: 1px dashed #181d26;
+  background: rgba(255,255,255,0.9);
+  font-family: inherit;
+  outline: none;
+  white-space: pre-wrap;
+}

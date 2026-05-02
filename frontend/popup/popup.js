@@ -5,6 +5,12 @@ if (typeof browser === 'undefined' && typeof chrome !== 'undefined') {
   window.browser = chrome;
 }
 
+function escapeText(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
 class PopupController {
   constructor() {
     this.currentTab = 'root';
@@ -255,11 +261,13 @@ class PopupController {
     document.getElementById('content').hidden = mode !== 'links';
     document.getElementById('searchContainer').hidden = mode !== 'links';
     document.getElementById('todoView').hidden = mode !== 'todo';
+    document.getElementById('chatsView').hidden = mode !== 'chats';
     document.getElementById('playgroundView').hidden = mode !== 'playground';
     document.getElementById('settingsView').hidden = mode !== 'settings';
     document.getElementById('notesView').hidden = mode !== 'notes';
     if (mode === 'todo') await this.renderTodo();
-    else if (mode === 'playground') this.ensurePlaygroundFrame();
+    else if (mode === 'chats') this.ensureChatsFrame();
+    else if (mode === 'playground') await this.renderHub();
     else if (mode === 'settings') await this.renderSettings();
     else if (mode === 'notes') await window.notesController?.open();
     else await this.render();
@@ -1517,11 +1525,130 @@ class PopupController {
     }
   }
 
-  ensurePlaygroundFrame() {
-    const frame = document.getElementById('playgroundFrameInline');
+  ensureChatsFrame() {
+    const frame = document.getElementById('chatsFrameInline');
     if (frame && !frame.src) {
       frame.src = browser.runtime.getURL('playground/playground.html') + '?embed=1';
     }
+  }
+
+  async renderHub() {
+    // Default sub-mode: hub page visible, module pane hidden.
+    document.getElementById('hubPage').hidden = false;
+    document.getElementById('hubModulePane').hidden = true;
+
+    const modules = [
+      { name: 'Canvas', desc: 'Drawing board', module: 'canvas/canvas.html' },
+      { name: 'Startup explorer', desc: 'Markets + valuations', soon: true },
+      { name: 'GitHub explorer', desc: 'Repos, commits, projects', soon: true },
+      { name: 'Feed', desc: 'Posts, comments, likes', soon: true },
+      { name: 'Clocks', desc: 'Multi-timezone clocks', soon: true },
+      { name: 'Timer', desc: 'Pomodoro / countdown', soon: true },
+      { name: 'Blogs', desc: 'Long-form like Medium', soon: true },
+      { name: 'Newsletters', desc: 'Subscribe + read', soon: true }
+    ];
+    const grid = document.getElementById('hubModules');
+    if (grid) {
+      grid.innerHTML = '';
+      for (const m of modules) {
+        const card = document.createElement('div');
+        card.className = 'hub-card' + (m.soon ? ' soon' : ' live');
+        card.innerHTML = `
+          <strong>${m.name}</strong>
+          <div class="hub-card-desc">${m.desc}</div>
+          ${m.soon ? '<span class="hub-badge">Soon</span>' : '<span class="hub-badge live-badge">Open</span>'}`;
+        if (!m.soon && m.module) {
+          card.addEventListener('click', () => this.openHubModule(m.name, m.module));
+        } else if (!m.soon && m.external) {
+          card.addEventListener('click', () => this.openLinkUrl(m.external));
+        }
+        grid.appendChild(card);
+      }
+    }
+
+    const back = document.getElementById('hubBackBtn');
+    if (back && !back._wired) {
+      back._wired = true;
+      back.addEventListener('click', () => {
+        document.getElementById('hubPage').hidden = false;
+        document.getElementById('hubModulePane').hidden = true;
+        const f = document.getElementById('hubModuleFrame');
+        if (f) f.src = 'about:blank';
+      });
+    }
+
+    // Wire request modal triggers
+    const addBtn = document.getElementById('addFeatureBtn');
+    if (addBtn && !addBtn._wired) {
+      addBtn._wired = true;
+      addBtn.addEventListener('click', () => {
+        document.getElementById('frTitle').value = '';
+        document.getElementById('frDesc').value = '';
+        modalManager.open('featureRequestModal');
+      });
+    }
+    const submit = document.getElementById('submitFeatureBtn');
+    if (submit && !submit._wired) {
+      submit._wired = true;
+      submit.addEventListener('click', () => this.submitFeatureRequest());
+    }
+
+    await this.loadFeatureRequests();
+  }
+
+  openHubModule(name, modulePath) {
+    document.getElementById('hubPage').hidden = true;
+    document.getElementById('hubModulePane').hidden = false;
+    document.getElementById('hubModuleTitle').textContent = name;
+    const f = document.getElementById('hubModuleFrame');
+    f.src = browser.runtime.getURL(modulePath);
+  }
+
+  async loadFeatureRequests() {
+    const list = document.getElementById('featureReqList');
+    if (!list) return;
+    list.innerHTML = '<div class="hub-empty">Loading…</div>';
+    try {
+      const reqs = await storage.listFeatureRequests();
+      list.innerHTML = '';
+      if (reqs.length === 0) {
+        list.innerHTML = '<div class="hub-empty">No requests yet.</div>';
+        return;
+      }
+      for (const r of reqs) {
+        const row = document.createElement('div');
+        row.className = 'fr-row';
+        row.innerHTML = `
+          <div class="fr-main">
+            <strong>${escapeText(r.title)}</strong>
+            <div class="fr-desc">${escapeText(r.description || '')}</div>
+            <div class="fr-time">${new Date(r.createdAt).toLocaleString()}</div>
+          </div>
+          <span class="fr-status fr-${r.status}">${r.status}</span>
+        `;
+        list.appendChild(row);
+      }
+    } catch (err) {
+      list.innerHTML = `<div class="hub-empty">Failed: ${escapeText(err.message || err)}</div>`;
+    }
+  }
+
+  async submitFeatureRequest() {
+    const title = document.getElementById('frTitle').value.trim();
+    const description = document.getElementById('frDesc').value.trim();
+    if (!title) { await uiAlert('Title required.'); return; }
+    try {
+      await storage.createFeatureRequest({ title, description });
+      modalManager.close('featureRequestModal');
+      await this.loadFeatureRequests();
+    } catch (err) {
+      await uiAlert('Failed: ' + (err.message || err));
+    }
+  }
+
+  ensurePlaygroundFrame() {
+    // Legacy alias — old name; new code uses ensureChatsFrame.
+    this.ensureChatsFrame();
   }
 
   async confirmMove() {

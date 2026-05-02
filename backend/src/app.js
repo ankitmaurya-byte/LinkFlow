@@ -10,6 +10,7 @@ import { router as todosRouter } from './routes/todos.js';
 import { router as shareRouter } from './routes/share.js';
 import { router as notesRouter, publicRouter as notesPublicRouter } from './routes/notes.js';
 import { router as uploadRouter } from './routes/upload.js';
+import { router as featureRequestsRouter } from './routes/featureRequests.js';
 
 export function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ export function createApp() {
   app.use('/notes', notesRouter);
   app.use('/public/notes', notesPublicRouter);
   app.use('/upload', uploadRouter);
+  app.use('/feature-requests', featureRequestsRouter);
 
   app.use(notFound);
   app.use(errorHandler);

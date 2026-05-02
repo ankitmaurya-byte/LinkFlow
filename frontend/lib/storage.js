@@ -332,6 +332,16 @@ class StorageManager {
     await api.authedFetch(`/notes/${id}`, { method: 'DELETE' });
   }
 
+  // === FEATURE REQUESTS ===
+  async listFeatureRequests() {
+    const res = await api.authedFetch('/feature-requests');
+    return res.requests || [];
+  }
+  async createFeatureRequest(payload) {
+    const res = await api.authedFetch('/feature-requests', { method: 'POST', body: payload });
+    return res.request;
+  }
+
   // === SEARCH ===
   async searchLinks(tabId, query) {
     const all = await this.getAllLinks(tabId);
