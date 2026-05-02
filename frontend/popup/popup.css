@@ -1390,37 +1390,41 @@ body.embed-mode {
 .settings-actions-inline { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 
 .todo-projects {
-  flex: 0 0 48px;
-  width: 48px;
+  flex: 0 0 var(--col-w);
+  width: var(--col-w);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   background: var(--bg-primary);
   position: relative;
   z-index: 4;
 }
-.todo-projects:hover {
-  flex: 0 0 var(--col-w);
-  width: var(--col-w);
-  overflow-y: auto;
+/* Collapse only while cursor is on the kanban side (right of projects). */
+.view-todo:has(.todo-kanban:hover) .todo-projects {
+  flex: 0 0 48px;
+  width: 48px;
+  overflow: hidden;
 }
 .todo-projects .proj-row span:not(.proj-edit):not(.proj-del) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.todo-projects:not(:hover) .proj-row::before {
+/* When collapsed (kanban hover), simplify rows to single icon. */
+.view-todo:has(.todo-kanban:hover) .todo-projects .proj-row::before {
   content: '📋';
   margin: 0 auto;
 }
-.todo-projects:not(:hover) .proj-row span,
-.todo-projects:not(:hover) .proj-edit,
-.todo-projects:not(:hover) .proj-del,
-.todo-projects:not(:hover) .todo-projects-head span:first-child {
+.view-todo:has(.todo-kanban:hover) .todo-projects .proj-row span,
+.view-todo:has(.todo-kanban:hover) .todo-projects .proj-edit,
+.view-todo:has(.todo-kanban:hover) .todo-projects .proj-del,
+.view-todo:has(.todo-kanban:hover) .todo-projects .todo-projects-head span:first-child {
   display: none;
 }
-.todo-projects:not(:hover) .todo-projects-head { justify-content: center; padding: 8px 6px; }
+.view-todo:has(.todo-kanban:hover) .todo-projects .todo-projects-head {
+  justify-content: center; padding: 8px 6px;
+}
 
 .todo-projects-head {
   padding: 8px 12px;
