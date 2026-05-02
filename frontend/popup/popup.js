@@ -620,11 +620,22 @@ class PopupController {
 
     container.innerHTML = '';
 
+    // Collapse columns when too many open. Keep last MAX_EXPANDED full-width;
+    // all earlier ones shrink to 1/3. With 4+ columns the last one also shrinks
+    // a bit so siblings stay visible.
+    const MAX_EXPANDED = 3;
+    const collapseUntil = Math.max(0, this.path.length - MAX_EXPANDED);
+    const collapseLast = this.path.length >= 4;
+
     // All columns built from path. path[0] is the (hidden) root tab's column.
     for (let i = 0; i < this.path.length; i++) {
       const node = this.path[i];
       const col = document.createElement('div');
-      col.className = 'tree-column';
+      const isLast = i === this.path.length - 1;
+      let cls = 'tree-column';
+      if (i < collapseUntil) cls += ' collapsed';
+      else if (collapseLast && isLast) cls += ' collapsed';
+      col.className = cls;
       col.dataset.colKey = `${node.tabId}::${node.folderId || 'root'}`;
 
       col.appendChild(this.makeActionRow(node.tabId, node.folderId));
