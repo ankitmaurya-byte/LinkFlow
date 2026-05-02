@@ -1400,8 +1400,11 @@ body.embed-mode {
   position: relative;
   z-index: 4;
 }
-/* Collapse only while cursor is on the kanban side (right of projects). */
-.view-todo:has(.todo-kanban:hover) .todo-projects {
+/* Collapse only while cursor is on the kanban side (right of projects).
+   Also keep collapsed while a task-detail popover is open (cursor on it
+   counts as kanban-side interaction). */
+.view-todo:has(.todo-kanban:hover) .todo-projects,
+body:has(.task-detail-modal.anchored) .view-todo .todo-projects {
   flex: 0 0 48px;
   width: 48px;
   overflow: hidden;
@@ -1411,9 +1414,8 @@ body.embed-mode {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* When collapsed (kanban hover), simplify rows to single icon. */
+/* When collapsed (kanban hover), hide labels but keep folder icon. */
 .view-todo:has(.todo-kanban:hover) .todo-projects .proj-row::before {
-  content: '📋';
   margin: 0 auto;
 }
 .view-todo:has(.todo-kanban:hover) .todo-projects .proj-row span,
@@ -1567,7 +1569,179 @@ body.embed-mode {
   cursor: grab;
   user-select: none;
   word-break: break-word;
+  position: relative;
 }
+.kanban-task-title { font-weight: 500; }
+.kanban-task-meta {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.kanban-task-meta .kt-prio,
+.kanban-task-meta .kt-type,
+.kanban-task-meta .kt-due,
+.kanban-task-meta .kt-assn,
+.kanban-task-meta .kt-comm {
+  background: var(--surface-soft);
+  border: 1px solid var(--hairline);
+  padding: 1px 5px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kt-prio-highest { background: #fce8e6; color: #aa2d00; }
+.kt-prio-high { background: #feefe3; color: #aa2d00; }
+.kt-prio-low { background: #e6f4ea; color: #006400; }
+.kt-prio-lowest { background: #f1f3f4; color: #6b7280; }
+.kt-type-bug { background: #fce8e6; color: #aa2d00; }
+.kt-type-story { background: #e8f0fe; color: #1a73e8; }
+.kt-type-epic { background: #f3e8fd; color: #9334e6; }
+.kanban-task-expand {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--ink);
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, transform 0.15s;
+}
+.kanban-task:hover .kanban-task-expand { opacity: 1; }
+.kanban-task-expand:hover {
+  background: var(--ink);
+  color: var(--canvas);
+  transform: scale(1.05);
+}
+
+/* === Task detail modal === */
+.task-detail-modal {
+  position: fixed; inset: 0;
+  background: rgba(24,29,38,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 99999;
+}
+/* Anchored mode: no scrim, popover floats next to the trigger. */
+.task-detail-modal.anchored {
+  background: transparent;
+  pointer-events: none;
+}
+.task-detail-modal.anchored .td-card {
+  pointer-events: auto;
+  box-shadow: 0 12px 32px rgba(24, 29, 38, 0.18), 0 0 0 1px var(--hairline);
+}
+.td-card {
+  background: var(--canvas);
+  width: 90vw; max-width: 920px;
+  height: 80vh; max-height: 720px;
+  display: flex; flex-direction: column;
+  border: 1px solid var(--hairline);
+}
+.td-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-bottom: 1px solid var(--hairline);
+}
+.td-id { font-size: 12px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+.td-head .td-close {
+  background: transparent; border: 0; font-size: 22px; cursor: pointer; color: var(--muted);
+}
+.td-body { flex: 1; display: flex; min-height: 0; }
+.td-left {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+  border-right: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.td-right {
+  flex: 0 0 280px;
+  padding: 16px 16px;
+  overflow-y: auto;
+  background: var(--surface-soft);
+}
+.td-title {
+  font-size: 22px;
+  font-weight: 500;
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-sans);
+}
+.td-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.td-desc {
+  width: 100%;
+  border: 1px solid var(--hairline);
+  padding: 8px 10px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+}
+.td-h { font-size: 13px; font-weight: 600; margin-top: 12px; color: var(--body); }
+.td-comments { display: flex; flex-direction: column; gap: 6px; }
+.td-empty { color: var(--muted); font-size: 12px; padding: 6px 0; }
+.td-comment {
+  border: 1px solid var(--hairline);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.td-comment-head { display: flex; gap: 6px; align-items: baseline; margin-bottom: 2px; }
+.td-comment-time { font-size: 10px; color: var(--muted); }
+.td-comment-body { white-space: pre-wrap; }
+.td-comment-form {
+  display: flex; gap: 6px; margin-top: 6px;
+}
+.td-comment-input {
+  flex: 1; padding: 6px 10px; border: 1px solid var(--hairline);
+  font-family: var(--font-sans); font-size: 13px; outline: none;
+}
+.td-comment-send {
+  padding: 6px 12px; background: var(--ink); color: var(--canvas);
+  border: 0; cursor: pointer; font-family: inherit; font-size: 13px;
+}
+
+.td-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.td-row label {
+  font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.06em;
+}
+.td-row select, .td-row input[type="date"], .td-row input[type="text"], .td-row input:not([type]) {
+  padding: 6px 8px;
+  border: 1px solid var(--hairline);
+  background: var(--canvas);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.td-row select:focus, .td-row input:focus { border-color: var(--ink); }
+.td-meta-val { font-size: 12px; color: var(--body); }
+.td-delete {
+  margin-top: 8px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--signature-coral);
+  color: var(--signature-coral);
+  padding: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+}
+.td-delete:hover { background: var(--signature-coral); color: var(--canvas); }
 
 .kanban-task:hover {
   border-color: var(--primary);

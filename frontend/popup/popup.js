@@ -573,8 +573,43 @@ class PopupController {
     card.className = 'kanban-task';
     card.draggable = true;
     card.dataset.taskId = task.id;
-    card.textContent = task.title;
     card._ctx = { __kind: 'task', projectId, task };
+
+    // Body: title row + meta line. Expand btn appears on hover.
+    const titleEl = document.createElement('div');
+    titleEl.className = 'kanban-task-title';
+    titleEl.textContent = task.title;
+    card.appendChild(titleEl);
+
+    const meta = document.createElement('div');
+    meta.className = 'kanban-task-meta';
+    const bits = [];
+    if (task.priority) bits.push(`<span class="kt-prio kt-prio-${task.priority}">${task.priority}</span>`);
+    if (task.type) bits.push(`<span class="kt-type kt-type-${task.type}">${task.type}</span>`);
+    if (task.dueDate) bits.push(`<span class="kt-due">📅 ${new Date(task.dueDate).toLocaleDateString()}</span>`);
+    if (Array.isArray(task.assignees) && task.assignees.length) bits.push(`<span class="kt-assn">👤 ${task.assignees.join(', ')}</span>`);
+    if (Array.isArray(task.comments) && task.comments.length) bits.push(`<span class="kt-comm">💬 ${task.comments.length}</span>`);
+    meta.innerHTML = bits.join(' ');
+    if (bits.length) card.appendChild(meta);
+
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'kanban-task-expand';
+    expandBtn.title = 'Open details';
+    expandBtn.textContent = '⤢';
+    let hoverTimer = null;
+    const openHover = () => {
+      if (hoverTimer) clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => this.openTaskDetail(projectId, task, expandBtn), 120);
+    };
+    expandBtn.addEventListener('mouseenter', openHover);
+    expandBtn.addEventListener('mouseleave', () => {
+      if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+    });
+    expandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.openTaskDetail(projectId, task, expandBtn);
+    });
+    card.appendChild(expandBtn);
 
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/task', task.id);
@@ -673,6 +708,217 @@ class PopupController {
       await storage.updateTodoTask(this.currentProjectId, taskId, { title: finalTitle });
       await this.renderKanban();
     });
+  }
+
+  async openTaskDetail(projectId, task, anchorEl = null) {
+    // Ensure all expected fields exist (back-fill defaults).
+    const t = Object.assign({
+      description: '',
+      priority: 'medium',
+      type: 'task',
+      dueDate: '',
+      labels: [],
+      reporter: '',
+      assignees: [],
+      comments: [],
+      createdAt: task.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }, task);
+
+    // Reporter defaults to current user.
+    if (!t.reporter) {
+      try { const me = await auth.getCurrentUser(); if (me?.username) t.reporter = me.username; } catch (_) {}
+    }
+
+    // Get statuses for current project.
+    const data = await storage.getTodoData();
+    const statuses = (data.statuses[projectId] || []).slice().sort((a, b) => a.order - b.order);
+
+    // Build modal.
+    document.querySelectorAll('.task-detail-modal').forEach(m => m.remove());
+    const overlay = document.createElement('div');
+    overlay.className = 'task-detail-modal';
+    overlay.innerHTML = `
+      <div class="td-card">
+        <div class="td-head">
+          <span class="td-id">${escapeText(task.id)}</span>
+          <button class="td-close">×</button>
+        </div>
+        <div class="td-body">
+          <div class="td-left">
+            <input class="td-title" value="${escapeText(t.title || '')}" placeholder="Task title" />
+            <label class="td-label">Description</label>
+            <textarea class="td-desc" rows="6" placeholder="Add a description…">${escapeText(t.description || '')}</textarea>
+            <h4 class="td-h">Comments</h4>
+            <div class="td-comments"></div>
+            <div class="td-comment-form">
+              <input class="td-comment-input" placeholder="Add a comment…" />
+              <button class="td-comment-send">Send</button>
+            </div>
+          </div>
+          <div class="td-right">
+            <div class="td-row">
+              <label>Status</label>
+              <select class="td-status">${statuses.map(s => `<option value="${escapeText(s.id)}"${s.id === t.statusId ? ' selected' : ''}>${escapeText(s.name)}</option>`).join('')}</select>
+            </div>
+            <div class="td-row">
+              <label>Type</label>
+              <select class="td-type">
+                ${['task','bug','story','epic'].map(v => `<option value="${v}"${v === t.type ? ' selected' : ''}>${v}</option>`).join('')}
+              </select>
+            </div>
+            <div class="td-row">
+              <label>Priority</label>
+              <select class="td-prio">
+                ${['lowest','low','medium','high','highest'].map(v => `<option value="${v}"${v === t.priority ? ' selected' : ''}>${v}</option>`).join('')}
+              </select>
+            </div>
+            <div class="td-row">
+              <label>Due date</label>
+              <input type="date" class="td-due" value="${t.dueDate ? new Date(t.dueDate).toISOString().slice(0,10) : ''}" />
+            </div>
+            <div class="td-row">
+              <label>Reporter</label>
+              <input class="td-reporter" value="${escapeText(t.reporter || '')}" placeholder="@username" />
+            </div>
+            <div class="td-row">
+              <label>Assignees</label>
+              <input class="td-assignees" value="${escapeText((t.assignees || []).join(', '))}" placeholder="@alice, @bob" />
+            </div>
+            <div class="td-row">
+              <label>Labels</label>
+              <input class="td-labels" value="${escapeText((t.labels || []).join(', '))}" placeholder="bug, frontend" />
+            </div>
+            <div class="td-row">
+              <label>Created</label>
+              <span class="td-meta-val">${escapeText(new Date(t.createdAt).toLocaleString())}</span>
+            </div>
+            <div class="td-row">
+              <label>Updated</label>
+              <span class="td-meta-val td-updated">${escapeText(new Date(t.updatedAt).toLocaleString())}</span>
+            </div>
+            <button class="td-delete">🗑 Delete task</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Anchor mode: open as right-side popover next to anchorEl, no scrim.
+    if (anchorEl) {
+      overlay.classList.add('anchored');
+      const r = anchorEl.getBoundingClientRect();
+      const card = overlay.querySelector('.td-card');
+      // Try right side; flip to left if overflow.
+      const w = Math.min(540, window.innerWidth - 24);
+      let left = r.right + 8;
+      if (left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 8);
+      let top = Math.max(8, Math.min(r.top, window.innerHeight - 480 - 8));
+      card.style.position = 'fixed';
+      card.style.left = left + 'px';
+      card.style.top = top + 'px';
+      card.style.width = w + 'px';
+      card.style.height = '480px';
+      card.style.maxHeight = (window.innerHeight - 16) + 'px';
+    }
+
+    const close = () => overlay.remove();
+    overlay.querySelector('.td-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    // Hover-close: when anchor mode, mouseleave both anchor + overlay closes.
+    if (anchorEl) {
+      let hoverCloseTimer = null;
+      const scheduleHoverClose = () => {
+        if (hoverCloseTimer) clearTimeout(hoverCloseTimer);
+        hoverCloseTimer = setTimeout(close, 350);
+      };
+      const cancelHoverClose = () => {
+        if (hoverCloseTimer) { clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
+      };
+      anchorEl.addEventListener('mouseleave', scheduleHoverClose);
+      anchorEl.addEventListener('mouseenter', cancelHoverClose);
+      overlay.addEventListener('mouseenter', cancelHoverClose);
+      overlay.addEventListener('mouseleave', scheduleHoverClose);
+    }
+
+    // Auto-save patches via debounce
+    let saveTimer = null;
+    const queueSave = (patch) => {
+      Object.assign(t, patch);
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try {
+          patch.updatedAt = new Date().toISOString();
+          await storage.updateTodoTask(projectId, task.id, patch);
+          overlay.querySelector('.td-updated').textContent = new Date(patch.updatedAt).toLocaleString();
+          await this.renderKanban();
+        } catch (err) { console.warn('save fail', err); }
+      }, 400);
+    };
+
+    overlay.querySelector('.td-title').addEventListener('input', e => queueSave({ title: e.target.value }));
+    overlay.querySelector('.td-desc').addEventListener('input', e => queueSave({ description: e.target.value }));
+    overlay.querySelector('.td-status').addEventListener('change', e => queueSave({ statusId: e.target.value }));
+    overlay.querySelector('.td-type').addEventListener('change', e => queueSave({ type: e.target.value }));
+    overlay.querySelector('.td-prio').addEventListener('change', e => queueSave({ priority: e.target.value }));
+    overlay.querySelector('.td-due').addEventListener('change', e => queueSave({ dueDate: e.target.value || '' }));
+    overlay.querySelector('.td-reporter').addEventListener('input', e => queueSave({ reporter: e.target.value.trim() }));
+    overlay.querySelector('.td-assignees').addEventListener('input', e => {
+      const list = e.target.value.split(',').map(s => s.trim().replace(/^@/, '')).filter(Boolean);
+      queueSave({ assignees: list });
+    });
+    overlay.querySelector('.td-labels').addEventListener('input', e => {
+      const list = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+      queueSave({ labels: list });
+    });
+    overlay.querySelector('.td-delete').addEventListener('click', async () => {
+      if (!await uiConfirm(`Delete task "${t.title}"?`)) return;
+      await storage.deleteTodoTask(projectId, task.id);
+      close();
+      await this.renderKanban();
+    });
+
+    // Comments
+    const commentsWrap = overlay.querySelector('.td-comments');
+    const renderComments = () => {
+      commentsWrap.innerHTML = '';
+      if (!t.comments?.length) {
+        commentsWrap.innerHTML = '<div class="td-empty">No comments yet.</div>';
+        return;
+      }
+      for (const c of t.comments) {
+        const row = document.createElement('div');
+        row.className = 'td-comment';
+        row.innerHTML = `
+          <div class="td-comment-head">
+            <strong>@${escapeText(c.author || '?')}</strong>
+            <span class="td-comment-time">${escapeText(new Date(c.createdAt).toLocaleString())}</span>
+          </div>
+          <div class="td-comment-body">${escapeText(c.text || '')}</div>
+        `;
+        commentsWrap.appendChild(row);
+      }
+    };
+    renderComments();
+
+    const commentInput = overlay.querySelector('.td-comment-input');
+    const sendComment = async () => {
+      const text = commentInput.value.trim();
+      if (!text) return;
+      let me = '';
+      try { me = (await auth.getCurrentUser())?.username || ''; } catch (_) {}
+      const c = { id: 'c-' + Date.now(), author: me || 'me', text, createdAt: new Date().toISOString() };
+      t.comments = (t.comments || []).concat(c);
+      commentInput.value = '';
+      renderComments();
+      try {
+        await storage.updateTodoTask(projectId, task.id, { comments: t.comments, updatedAt: new Date().toISOString() });
+        await this.renderKanban();
+      } catch (err) { uiAlert('Comment save failed: ' + (err.message || err)); }
+    };
+    overlay.querySelector('.td-comment-send').addEventListener('click', sendComment);
+    commentInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendComment(); });
   }
 
   getDragAfterElement(container, y) {
