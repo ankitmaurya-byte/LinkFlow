@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LinkFlow GitHub Explorer</title>
+  <link rel="stylesheet" href="github.css" />
+</head>
+<body>
+  <div class="gh-app">
+    <header class="gh-bar">
+      <input type="search" id="ghQuery" placeholder="Search repos: language:javascript stars:>1000" />
+      <select id="ghSort">
+        <option value="best-match">Best match</option>
+        <option value="stars">Most stars</option>
+        <option value="updated">Recently updated</option>
+        <option value="forks">Most forks</option>
+      </select>
+      <button id="ghSearchBtn">Search</button>
+      <button id="ghTokenBtn" title="Set personal access token (lifts rate limit)">🔑</button>
+    </header>
+    <main class="gh-main">
+      <section class="gh-list" id="ghList">
+        <div class="gh-empty">Type a query and press Enter.</div>
+      </section>
+      <section class="gh-detail" id="ghDetail">
+        <div class="gh-empty">Select a repository.</div>
+      </section>
+    </main>
+  </div>
+  <script src="github.js"></script>
+</body>
+</html>

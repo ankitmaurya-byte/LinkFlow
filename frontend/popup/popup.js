@@ -1539,8 +1539,8 @@ class PopupController {
 
     const modules = [
       { name: 'Canvas', desc: 'Drawing board', module: 'canvas/canvas.html' },
+      { name: 'GitHub explorer', desc: 'Repos, commits, issues, PRs', module: 'github/github.html' },
       { name: 'Startup explorer', desc: 'Markets + valuations', soon: true },
-      { name: 'GitHub explorer', desc: 'Repos, commits, projects', soon: true },
       { name: 'Feed', desc: 'Posts, comments, likes', soon: true },
       { name: 'Clocks', desc: 'Multi-timezone clocks', soon: true },
       { name: 'Timer', desc: 'Pomodoro / countdown', soon: true },

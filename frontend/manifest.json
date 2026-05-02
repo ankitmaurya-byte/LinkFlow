@@ -61,7 +61,8 @@
         "components/*",
         "lib/*",
         "playground/*",
-        "canvas/*"
+        "canvas/*",
+        "github/*"
       ],
       "matches": ["<all_urls>"]
     }
