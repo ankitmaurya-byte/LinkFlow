@@ -396,6 +396,13 @@ class PopupController {
       wrap.appendChild(this.renderKanbanCol(projectId, status, tasks));
     }
 
+    // Auto-grow popup width: sidebar(48) + projects(48) + statuses × 220 + add(200).
+    const desired = 48 + 48 + statuses.length * 220 + 200;
+    document.body.style.minWidth = desired + 'px';
+    try {
+      window.parent?.postMessage({ type: 'linkflow-resize-request', width: desired }, '*');
+    } catch (_) {}
+
     const addCol = document.createElement('button');
     addCol.className = 'kanban-add-col';
     addCol.textContent = '+ Add status';

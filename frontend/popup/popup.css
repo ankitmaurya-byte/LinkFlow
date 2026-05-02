@@ -1278,14 +1278,37 @@ body.embed-mode {
 .settings-status { font-size: 13px; color: var(--success); }
 
 .todo-projects {
-  flex: 0 0 var(--col-w);
-  width: var(--col-w);
+  flex: 0 0 48px;
+  width: 48px;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg-primary);
+  position: relative;
+  z-index: 4;
 }
+.todo-projects:hover {
+  flex: 0 0 var(--col-w);
+  width: var(--col-w);
+  overflow-y: auto;
+}
+.todo-projects .proj-row span:not(.proj-edit):not(.proj-del) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.todo-projects:not(:hover) .proj-row::before {
+  content: '📋';
+  margin: 0 auto;
+}
+.todo-projects:not(:hover) .proj-row span,
+.todo-projects:not(:hover) .proj-edit,
+.todo-projects:not(:hover) .proj-del,
+.todo-projects:not(:hover) .todo-projects-head span:first-child {
+  display: none;
+}
+.todo-projects:not(:hover) .todo-projects-head { justify-content: center; padding: 8px 6px; }
 
 .todo-projects-head {
   padding: 8px 12px;
