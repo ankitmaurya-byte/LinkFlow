@@ -279,6 +279,70 @@ class PopupController {
     document.getElementById('setWhitelist').value = s.whitelist || '';
     document.getElementById('setBlacklist').value = s.blacklist || '';
     document.getElementById('setNotifications').checked = !!s.notificationsEnabled;
+    this.applySiteMode(s.siteMode || 'whitelist-default');
+
+    document.getElementById('blockAllBtn').onclick = async () => {
+      await this.saveSettings();
+      const next = await storage.saveSettings({ siteMode: 'blacklist-default' });
+      this.applySiteMode(next.siteMode);
+    };
+    document.getElementById('allowAllBtn').onclick = async () => {
+      await this.saveSettings();
+      const next = await storage.saveSettings({ siteMode: 'whitelist-default' });
+      this.applySiteMode(next.siteMode);
+    };
+    document.getElementById('addCurrentBlacklist').onclick = () => this.addCurrentHostToList('setBlacklist');
+    document.getElementById('addCurrentWhitelist').onclick = () => this.addCurrentHostToList('setWhitelist');
+  }
+
+  applySiteMode(mode) {
+    const useBlacklist = mode !== 'blacklist-default';
+    document.getElementById('modeBlacklist').hidden = !useBlacklist;
+    document.getElementById('modeWhitelist').hidden = useBlacklist;
+    document.getElementById('siteModeStatus').textContent = useBlacklist
+      ? 'Bubble shows on every site except those in the blacklist.'
+      : 'Bubble is hidden on every site except those in the whitelist.';
+  }
+
+  async addCurrentHostToList(textareaId) {
+    try {
+      // Try direct API first; fall back to background message (works when popup
+      // runs inside floating-panel iframe and lacks browser.tabs directly).
+      let url = '';
+      const tabsApi = (typeof browser !== 'undefined' && browser.tabs) ||
+                      (typeof chrome !== 'undefined' && chrome.tabs) || null;
+      if (tabsApi?.query) {
+        try {
+          const result = await tabsApi.query({ active: true, currentWindow: true });
+          const tab = Array.isArray(result) ? result[0] : null;
+          url = tab?.url || '';
+        } catch (_) {}
+      }
+      if (!url && typeof browser !== 'undefined' && browser.runtime?.sendMessage) {
+        try {
+          const res = await browser.runtime.sendMessage({ type: 'GET_CURRENT_TAB' });
+          url = res?.url || '';
+        } catch (_) {}
+      }
+      // Iframe last resort: parent host.
+      if (!url) {
+        try { url = window.parent?.location?.href || ''; } catch (_) {}
+      }
+      if (!url) { await uiAlert('Cannot read current tab.'); return; }
+      let host = '';
+      try { host = new URL(url).hostname; } catch (_) {}
+      if (!host) { await uiAlert('Cannot parse host from: ' + url); return; }
+      const ta = document.getElementById(textareaId);
+      const lines = (ta.value || '').split('\n').map(s => s.trim()).filter(Boolean);
+      if (lines.includes(host)) {
+        await uiAlert(`${host} already in list.`);
+        return;
+      }
+      lines.push(host);
+      ta.value = lines.join('\n');
+    } catch (err) {
+      await uiAlert('Failed: ' + (err.message || err));
+    }
   }
 
   async saveSettings() {

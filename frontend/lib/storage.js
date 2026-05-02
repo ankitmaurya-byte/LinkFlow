@@ -295,6 +295,9 @@ class StorageManager {
     return Object.assign({
       textColor: '#181d26',
       bgColor: '#ffffff',
+      // 'whitelist-default' = show bubble everywhere, blacklist removes specific hosts.
+      // 'blacklist-default' = hide bubble everywhere, whitelist allows specific hosts.
+      siteMode: 'whitelist-default',
       whitelist: '',
       blacklist: '',
       notificationsEnabled: true

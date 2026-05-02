@@ -21,11 +21,15 @@
     try {
       const { userSettings = {} } = await browserApi.storage.local.get(['userSettings']);
       const host = (location.hostname || '').toLowerCase();
+      const mode = userSettings.siteMode || 'whitelist-default';
       const wl = (userSettings.whitelist || '').split('\n').map(s => s.trim()).filter(Boolean);
       const bl = (userSettings.blacklist || '').split('\n').map(s => s.trim()).filter(Boolean);
-      if (bl.some(p => matchesPattern(host, p))) return false;
-      if (wl.length > 0 && !wl.some(p => matchesPattern(host, p))) return false;
-      return true;
+      if (mode === 'blacklist-default') {
+        // Hidden everywhere unless whitelisted.
+        return wl.some(p => matchesPattern(host, p));
+      }
+      // Default: allow everywhere except blacklist.
+      return !bl.some(p => matchesPattern(host, p));
     } catch (_) { return true; }
   }
   // If site blocked, abort injection entirely.

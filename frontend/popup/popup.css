@@ -1276,6 +1276,10 @@ body.embed-mode {
 }
 .settings-actions { display: flex; align-items: center; gap: 12px; }
 .settings-status { font-size: 13px; color: var(--success); }
+.settings-hint { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.settings-mode { display: block; }
+.settings-mode[hidden] { display: none; }
+.settings-actions-inline { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 
 .todo-projects {
   flex: 0 0 48px;

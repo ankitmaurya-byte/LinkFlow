@@ -107,13 +107,30 @@
 
           <section class="settings-section">
             <h3>Floating widget</h3>
-            <div class="settings-row col">
-              <label for="setWhitelist">Whitelist (one host pattern per line — bubble shows only on these)</label>
-              <textarea id="setWhitelist" rows="4" placeholder="example.com&#10;*.github.com"></textarea>
+            <p id="siteModeStatus" class="settings-hint"></p>
+
+            <!-- Default: bubble shows everywhere except blacklist. -->
+            <div id="modeBlacklist" class="settings-mode">
+              <div class="settings-row col">
+                <label for="setBlacklist">Blacklist (bubble hidden on these sites)</label>
+                <textarea id="setBlacklist" rows="5" placeholder="bank.com&#10;*.gov"></textarea>
+              </div>
+              <div class="settings-actions-inline">
+                <button class="btn btn-sm btn-outline" id="addCurrentBlacklist">+ Add current tab</button>
+                <button class="btn btn-sm btn-secondary" id="blockAllBtn">🚫 Block all sites instead</button>
+              </div>
             </div>
-            <div class="settings-row col">
-              <label for="setBlacklist">Blacklist (one host pattern per line — bubble hidden on these)</label>
-              <textarea id="setBlacklist" rows="4" placeholder="bank.com&#10;*.gov"></textarea>
+
+            <!-- Alt: bubble hidden everywhere except whitelist. -->
+            <div id="modeWhitelist" class="settings-mode" hidden>
+              <div class="settings-row col">
+                <label for="setWhitelist">Whitelist (bubble shows ONLY on these sites)</label>
+                <textarea id="setWhitelist" rows="5" placeholder="example.com&#10;*.github.com"></textarea>
+              </div>
+              <div class="settings-actions-inline">
+                <button class="btn btn-sm btn-outline" id="addCurrentWhitelist">+ Add current tab</button>
+                <button class="btn btn-sm btn-secondary" id="allowAllBtn">✅ Allow all sites instead</button>
+              </div>
             </div>
           </section>
 
