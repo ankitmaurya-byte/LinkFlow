@@ -84,6 +84,19 @@
   padding: 0;
   box-sizing: border-box;
   border-radius: 0 !important;
+  transition:
+    background-color 0.28s ease,
+    color 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    opacity 0.28s ease,
+    transform 0.28s ease,
+    flex-basis 0.32s ease,
+    width 0.32s ease,
+    min-width 0.32s ease,
+    max-width 0.32s ease,
+    height 0.32s ease,
+    padding 0.28s ease;
 }
 
 body {
@@ -430,7 +443,7 @@ body.embed-mode {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  overflow-x: hidden;
+  overflow-x: auto;
   flex: 1;
   width: 100%;
   height: 100%;
@@ -451,23 +464,29 @@ body.embed-mode {
   background: var(--bg-primary);
   margin: 0;
   padding: 0;
-  transition: flex-basis 0.18s, width 0.18s, min-width 0.18s, max-width 0.18s;
+  /* base wildcard transition handles flex-basis/width/etc. */
 }
 
-/* Collapsed = 1/3 width; labels still visible (truncated). Hover expands. */
-.tree-column.collapsed {
-  flex: 0 0 calc(var(--col-w) / 3);
-  width: calc(var(--col-w) / 3);
-  min-width: calc(var(--col-w) / 3);
-  max-width: calc(var(--col-w) / 3);
+/* New column slide-in: starts collapsed + transparent, transitions to full size.
+   Wildcard transition handles width/opacity. ~480ms feels smooth. */
+.tree-column.col-appearing {
+  flex: 0 0 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  opacity: 0;
+  overflow: hidden;
 }
-.tree-column.collapsed:hover {
-  flex: 0 0 var(--col-w);
-  width: var(--col-w);
-  min-width: var(--col-w);
-  max-width: var(--col-w);
-  z-index: 5;
+.tree-column {
+  transition:
+    flex-basis 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    max-width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.4s ease,
+    background-color 0.28s ease;
 }
+
 
 .tree-column:last-child {
   border-right: 0;

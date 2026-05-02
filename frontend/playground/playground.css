@@ -58,6 +58,17 @@
   padding: 0;
   box-sizing: border-box;
   border-radius: 0 !important;
+  transition:
+    background-color 0.28s ease,
+    color 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    opacity 0.28s ease,
+    transform 0.28s ease,
+    flex-basis 0.32s ease,
+    width 0.32s ease,
+    height 0.32s ease,
+    padding 0.28s ease;
 }
 
 body {

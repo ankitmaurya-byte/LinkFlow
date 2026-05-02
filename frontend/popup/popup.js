@@ -620,23 +620,16 @@ class PopupController {
 
     container.innerHTML = '';
 
-    // Collapse columns when too many open. Keep last MAX_EXPANDED full-width;
-    // all earlier ones shrink to 1/3. With 4+ columns the last one also shrinks
-    // a bit so siblings stay visible.
-    const MAX_EXPANDED = 3;
-    const collapseUntil = Math.max(0, this.path.length - MAX_EXPANDED);
-    const collapseLast = this.path.length >= 4;
 
     // All columns built from path. path[0] is the (hidden) root tab's column.
     for (let i = 0; i < this.path.length; i++) {
       const node = this.path[i];
       const col = document.createElement('div');
-      const isLast = i === this.path.length - 1;
-      let cls = 'tree-column';
-      if (i < collapseUntil) cls += ' collapsed';
-      else if (collapseLast && isLast) cls += ' collapsed';
-      col.className = cls;
+      col.className = 'tree-column';
       col.dataset.colKey = `${node.tabId}::${node.folderId || 'root'}`;
+      // Animate-in newly opened columns (not in saved scroll map).
+      const isNew = !(col.dataset.colKey in savedScroll);
+      if (isNew) col.classList.add('col-appearing');
 
       col.appendChild(this.makeActionRow(node.tabId, node.folderId));
 
@@ -690,6 +683,25 @@ class PopupController {
     }
 
     emptyState.style.display = 'none';
+
+    // Grow popup width to fit all columns: sidebar (~48) + cols × col-w.
+    const sidebarW = 48;
+    const colW = 220;
+    const desired = sidebarW + this.path.length * colW;
+    document.body.style.minWidth = desired + 'px';
+    // Ask floating-panel parent to resize iframe accordingly.
+    try {
+      window.parent?.postMessage({ type: 'linkflow-resize-request', width: desired }, '*');
+    } catch (_) {}
+
+    // Trigger slide-in transition for newly added columns.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        container.querySelectorAll('.tree-column.col-appearing').forEach(c => {
+          c.classList.remove('col-appearing');
+        });
+      });
+    });
 
     // Restore vertical scroll per column; horizontal scroll only if newer
     // columns weren't added (else auto-scroll right to reveal new column).

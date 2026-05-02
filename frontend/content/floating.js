@@ -87,7 +87,21 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    :host, * { box-sizing: border-box; border-radius: 0 !important; scrollbar-width: none !important; -ms-overflow-style: none !important; }
+    :host, * {
+      box-sizing: border-box;
+      border-radius: 0 !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+      transition:
+        background-color 0.28s ease,
+        color 0.28s ease,
+        border-color 0.28s ease,
+        box-shadow 0.28s ease,
+        opacity 0.28s ease,
+        transform 0.28s ease,
+        width 0.32s ease,
+        height 0.32s ease;
+    }
     *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
     .wrap {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -300,12 +314,22 @@
   }, true);
 
   window.addEventListener('message', (e) => {
-    if (e?.data?.type !== 'linkflow-drag') return;
-    if (e.data.state === 'start') {
-      dragLock = true;
-      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
-    } else {
-      dragLock = false;
+    if (e?.data?.type === 'linkflow-drag') {
+      if (e.data.state === 'start') {
+        dragLock = true;
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+      } else {
+        dragLock = false;
+      }
+      return;
+    }
+    if (e?.data?.type === 'linkflow-resize-request') {
+      const w = Number(e.data.width);
+      if (Number.isFinite(w) && w > PANEL_MIN_W) {
+        PANEL_W = clampSize(w, PANEL_MIN_W, window.innerWidth - 16);
+        if (wrap.classList.contains('open')) positionPanel();
+        saveSize(PANEL_W, PANEL_H);
+      }
     }
   });
 
