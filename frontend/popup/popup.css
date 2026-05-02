@@ -606,6 +606,10 @@ body.embed-mode {
   transition: background 0.15s, color 0.15s;
 }
 
+/* Link rows: hide action buttons until row hover. */
+.col-row.is-link .tree-menu-btn { display: none; }
+.col-row.is-link:hover .tree-menu-btn { display: inline-flex; }
+
 .tree-menu-btn:hover {
   color: var(--text-primary);
   background: rgba(0,0,0,0.05);
