@@ -203,6 +203,17 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Bl
 .tb-modal-head button {
   background: transparent; border: 0; font-size: 18px; cursor: pointer; color: #6b7280;
 }
+.tb-modal-newfolder {
+  display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid #dddddd;
+}
+.tb-modal-newfolder input {
+  flex: 1; padding: 6px 8px; border: 1px solid #d1d5db; font-size: 13px;
+}
+.tb-modal-newfolder button {
+  padding: 6px 10px; border: 1px solid #181d26; background: #181d26;
+  color: #fff; cursor: pointer; font-size: 13px;
+}
+.tb-modal-newfolder button:hover { background: #2a3142; }
 .tb-modal-body { flex: 1; overflow-y: auto; padding: 8px; }
 .tb-modal-foot {
   display: flex; justify-content: flex-end; gap: 8px;

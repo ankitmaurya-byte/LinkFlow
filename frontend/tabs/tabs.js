@@ -364,6 +364,32 @@
     pickerCallback = null;
   });
 
+  async function createFolderInPicker() {
+    const input = document.getElementById('tbNewFolderName');
+    const name = (input.value || '').trim();
+    if (!name) { input.focus(); return; }
+    try {
+      const res = await api.authedFetch('/bookmarks', {
+        method: 'POST',
+        body: { tab: 'root', parentId: pickedFolderId, kind: 'folder', name }
+      });
+      input.value = '';
+      const cb = pickerCallback;
+      await openFolderPicker(cb);
+      const newId = res?.bookmark?.id;
+      if (newId) {
+        const row = document.querySelector(`.tb-folder-row[data-folder-id="${newId}"]`);
+        if (row) selectFolder(row, newId);
+      }
+    } catch (err) {
+      uiAlert('Create folder failed: ' + (err.message || err));
+    }
+  }
+  document.getElementById('tbCreateFolder').addEventListener('click', createFolderInPicker);
+  document.getElementById('tbNewFolderName').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); createFolderInPicker(); }
+  });
+
   // === SESSIONS ===
   async function loadSessions() {
     const list = document.getElementById('tbSessionList');
