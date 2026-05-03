@@ -117,6 +117,29 @@ class PopupController {
     });
     this._reflectLinksViewMode();
 
+    // Track cursor for paste-into-current-column targeting.
+    this._cursorTarget = null;
+    document.addEventListener('mousemove', (e) => {
+      const col = e.target.closest?.('.tree-column[data-col-key]');
+      const tile = e.target.closest?.('.explorer-tile.is-folder');
+      const grid = e.target.closest?.('.explorer-grid');
+      if (col) {
+        const [tabId, folderRaw] = col.dataset.colKey.split('::');
+        this._cursorTarget = { tabId, folderId: folderRaw === 'root' ? null : folderRaw };
+      } else if (tile) {
+        const ctx = tile._explorerCtx;
+        if (ctx) this._cursorTarget = { tabId: ctx.tabId, folderId: ctx.folderId };
+      } else if (grid) {
+        this._cursorTarget = {
+          tabId: grid.dataset.tabId,
+          folderId: grid.dataset.parentId || null
+        };
+      }
+    });
+
+    // Ctrl/Cmd+V → paste URL into the column / folder under the cursor.
+    document.addEventListener('paste', (e) => this.handleGlobalPaste(e));
+
     // Save custom link (modal action)
     document.getElementById('saveCustomLinkBtn').addEventListener('click', () => {
       this.saveCustomLink();
@@ -1298,6 +1321,7 @@ class PopupController {
   makeExplorerTile({ type, tabId, folder, link, label, onOpen }) {
     const tile = document.createElement('div');
     tile.className = 'explorer-tile ' + (type === 'folder' ? 'is-folder' : 'is-link');
+    if (type === 'folder') tile._explorerCtx = { tabId, folderId: folder.id };
     const itemId = type === 'folder' ? folder.id : link.id;
     const sourceParentId = type === 'folder' ? (folder.parentId || null) : (link.folderId || null);
 
@@ -1377,7 +1401,6 @@ class PopupController {
     const actions = [
       { icon: 'save', label: 'Save Current Tab', run: () => this.saveCurrentInto(tabId, folderId) },
       { icon: 'save-close', label: 'Save & Close Tab', run: () => this.saveCurrentAndClose(tabId, folderId) },
-      { icon: 'link', label: 'Paste URL', run: () => this.openPasteAt(tabId, folderId) },
       isTabsColumn
         ? { icon: 'folder-plus', label: 'New Tab', run: () => this.createNewTab() }
         : { icon: 'folder-plus', label: 'New Folder', run: () => this.openNewFolderAt(tabId, folderId) },
@@ -1475,6 +1498,37 @@ class PopupController {
     this.currentTab = tabId;
     this.currentFolder = folderId;
     modalManager.open('pasteUrlModal');
+  }
+
+  async handleGlobalPaste(e) {
+    if (this.viewMode !== 'links') return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    let text = '';
+    try { text = (e.clipboardData || window.clipboardData)?.getData('text') || ''; } catch (_) {}
+    text = text.trim();
+    if (!text) return;
+    if (!/^https?:\/\//i.test(text)) return;
+    e.preventDefault();
+    const target = this._cursorTarget || (() => {
+      const last = this.path?.[this.path.length - 1];
+      return last ? { tabId: last.tabId, folderId: last.folderId } : { tabId: 'root', folderId: null };
+    })();
+    let title = text;
+    try { title = new URL(text).hostname.replace(/^www\./, '') || text; } catch (_) {}
+    try {
+      const platform = (typeof PlatformDetector !== 'undefined' && PlatformDetector.detect)
+        ? PlatformDetector.detect(text) : null;
+      await storage.createLink(target.tabId, {
+        title,
+        url: text,
+        folderId: target.folderId || null,
+        platform
+      });
+      await this.render();
+    } catch (err) {
+      uiAlert('Paste failed: ' + (err.message || err));
+    }
   }
 
   openNewFolderAt(tabId, folderId) {
