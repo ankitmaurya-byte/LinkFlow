@@ -19,6 +19,8 @@ class PopupController {
     this.expanded = new Set();
     this.viewMode = 'links'; // 'links' | 'todo'
     this.currentProjectId = null;
+    this.collapsedStatuses = new Set(); // `${projectId}:${statusId}`
+    this.todoSearch = '';
 
     this.tempRenameContext = null;
     this.tempDeleteContext = null;
@@ -371,6 +373,19 @@ class PopupController {
   }
 
   async renderTodo() {
+    const search = document.getElementById('todoSearch');
+    if (search && !search._wired) {
+      search._wired = true;
+      search.value = this.todoSearch || '';
+      let t = null;
+      search.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          this.todoSearch = search.value.trim().toLowerCase();
+          this.renderKanban();
+        }, 120);
+      });
+    }
     const projWrap = document.getElementById('todoProjects');
     projWrap.innerHTML = '';
 
@@ -492,15 +507,40 @@ class PopupController {
   }
 
   renderKanbanCol(projectId, status, allTasks) {
+    const collapseKey = `${projectId}:${status.id}`;
+    const isCollapsed = this.collapsedStatuses.has(collapseKey);
+    const q = this.todoSearch || '';
+    const colTasksAll = allTasks
+      .filter(t => t.statusId === status.id)
+      .sort((a, b) => a.order - b.order);
+    const colTasks = q
+      ? colTasksAll.filter(t =>
+          (t.title || '').toLowerCase().includes(q) ||
+          (t.description || '').toLowerCase().includes(q) ||
+          (Array.isArray(t.labels) ? t.labels.join(' ') : '').toLowerCase().includes(q))
+      : colTasksAll;
+
     const col = document.createElement('div');
-    col.className = 'kanban-col';
+    col.className = 'kanban-col' + (isCollapsed ? ' collapsed' : '');
     col.dataset.statusId = status.id;
 
     const head = document.createElement('div');
     head.className = 'kanban-col-head';
+
+    const chev = document.createElement('button');
+    chev.className = 'kanban-col-collapse';
+    chev.textContent = isCollapsed ? '▸' : '▾';
+    chev.title = isCollapsed ? 'Expand' : 'Collapse';
+    chev.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (isCollapsed) this.collapsedStatuses.delete(collapseKey);
+      else this.collapsedStatuses.add(collapseKey);
+      this.renderKanban();
+    });
+
     const name = document.createElement('span');
     name.className = 'kanban-col-name';
-    name.contentEditable = 'true';
+    name.contentEditable = isCollapsed ? 'false' : 'true';
     name.spellcheck = false;
     name.textContent = status.name;
     name.addEventListener('keydown', (e) => {
@@ -510,6 +550,17 @@ class PopupController {
       const v = name.textContent.trim();
       if (v && v !== status.name) await storage.renameTodoStatus(projectId, status.id, v);
     });
+    if (isCollapsed) {
+      name.addEventListener('click', () => {
+        this.collapsedStatuses.delete(collapseKey);
+        this.renderKanban();
+      });
+    }
+
+    const count = document.createElement('span');
+    count.className = 'kanban-col-count';
+    count.textContent = colTasks.length;
+
     const del = document.createElement('button');
     del.className = 'kanban-col-del';
     del.textContent = '🗑️';
@@ -519,8 +570,10 @@ class PopupController {
       await storage.deleteTodoStatus(projectId, status.id);
       await this.renderKanban();
     });
-    head.append(name, del);
+    head.append(chev, name, count, del);
     col.appendChild(head);
+
+    if (isCollapsed) return col;
 
     const list = document.createElement('div');
     list.className = 'kanban-list';
@@ -543,10 +596,6 @@ class PopupController {
       await storage.moveTodoTask(projectId, taskId, status.id, newIndex);
       await this.renderKanban();
     });
-
-    const colTasks = allTasks
-      .filter(t => t.statusId === status.id)
-      .sort((a, b) => a.order - b.order);
 
     for (const task of colTasks) {
       list.appendChild(this.renderTaskCard(projectId, task));
