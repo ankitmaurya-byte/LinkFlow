@@ -21,6 +21,8 @@ class PopupController {
     this.currentProjectId = null;
     this.collapsedStatuses = new Set(); // `${projectId}:${statusId}`
     this.todoSearch = '';
+    try { this.linksViewMode = localStorage.getItem('linksViewMode') || 'column'; }
+    catch (_) { this.linksViewMode = 'column'; }
 
     this.tempRenameContext = null;
     this.tempDeleteContext = null;
@@ -106,6 +108,14 @@ class PopupController {
       });
       btn.addEventListener('mouseleave', () => clearTimeout(hoverTimer));
     });
+
+    // Links view-mode toggle (column ↔ explorer). Hover to switch.
+    document.querySelectorAll('.view-toggle-btn[data-mode]').forEach(btn => {
+      const mode = btn.dataset.mode;
+      btn.addEventListener('click', () => this.setLinksViewMode(mode));
+      btn.addEventListener('mouseenter', () => this.setLinksViewMode(mode));
+    });
+    this._reflectLinksViewMode();
 
     // Save custom link (modal action)
     document.getElementById('saveCustomLinkBtn').addEventListener('click', () => {
@@ -996,12 +1006,29 @@ class PopupController {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
+  setLinksViewMode(mode) {
+    if (mode !== 'column' && mode !== 'explorer') return;
+    if (this.linksViewMode === mode) { this._reflectLinksViewMode(); return; }
+    this.linksViewMode = mode;
+    try { localStorage.setItem('linksViewMode', mode); } catch (_) {}
+    this._reflectLinksViewMode();
+    if (this.viewMode === 'links') this.render();
+  }
+
+  _reflectLinksViewMode() {
+    document.querySelectorAll('.view-toggle-btn[data-mode]').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === this.linksViewMode);
+    });
+  }
+
   async render() {
+    if (this.linksViewMode === 'explorer') return this.renderExplorer();
     this.ensurePath();
     if (this.path.length === 0) this.path = [{ tabId: 'root', folderId: null }];
     await this.ensureAutoExpand();
     const container = document.getElementById('itemsContainer');
     const emptyState = document.getElementById('emptyState');
+    container.classList.remove('explorer-mode');
 
     // Capture scroll positions before re-render so nothing jumps.
     const savedScroll = {};
@@ -1110,6 +1137,238 @@ class PopupController {
     }
 
     await this.updateTabCounts();
+  }
+
+  async renderExplorer() {
+    this.ensurePath();
+    if (this.path.length === 0) this.path = [{ tabId: 'root', folderId: null }];
+    const container = document.getElementById('itemsContainer');
+    const emptyState = document.getElementById('emptyState');
+    container.innerHTML = '';
+    container.classList.add('explorer-mode');
+
+    const last = this.path[this.path.length - 1];
+    const tabId = last.tabId;
+    const folderId = last.folderId;
+
+    // Breadcrumb bar at top.
+    const crumb = document.createElement('div');
+    crumb.className = 'explorer-crumbs';
+    const allFolders = await storage.getFolders(tabId);
+    const folderById = new Map(allFolders.map(f => [f.id, f]));
+
+    // Build crumb chain: root → folder → folder
+    const homeBtn = document.createElement('button');
+    homeBtn.className = 'explorer-crumb';
+    homeBtn.textContent = 'Home';
+    homeBtn.addEventListener('click', () => {
+      this.path = [{ tabId: 'root', folderId: null }];
+      this.currentFolder = null;
+      this.saveCurrentView();
+      this.render();
+    });
+    crumb.appendChild(homeBtn);
+
+    const chain = [];
+    let cur = folderId;
+    while (cur) {
+      const f = folderById.get(cur);
+      if (!f) break;
+      chain.unshift(f);
+      cur = f.parentId || null;
+    }
+    chain.forEach(f => {
+      const sep = document.createElement('span');
+      sep.className = 'explorer-crumb-sep';
+      sep.textContent = '/';
+      crumb.appendChild(sep);
+      const b = document.createElement('button');
+      b.className = 'explorer-crumb';
+      b.textContent = f.name;
+      b.addEventListener('click', () => {
+        // Rebuild path up to this folder.
+        const newPath = [{ tabId, folderId: null }];
+        const trail = [];
+        let c = f.id;
+        while (c) {
+          trail.unshift(c);
+          const ff = folderById.get(c);
+          c = ff?.parentId || null;
+        }
+        for (const tid of trail) newPath.push({ tabId, folderId: tid });
+        this.path = newPath;
+        this.currentFolder = f.id;
+        this.saveCurrentView();
+        this.render();
+      });
+      crumb.appendChild(b);
+    });
+    container.appendChild(crumb);
+
+    // Action row (save / paste / new folder).
+    container.appendChild(this.makeActionRow(tabId, folderId));
+
+    // Up button if not at root.
+    if (folderId) {
+      const up = document.createElement('button');
+      up.className = 'explorer-up';
+      up.textContent = '⬆ Up';
+      up.addEventListener('click', () => {
+        this.path.pop();
+        const prev = this.path[this.path.length - 1];
+        this.currentFolder = prev?.folderId || null;
+        this.saveCurrentView();
+        this.render();
+      });
+      container.appendChild(up);
+    }
+
+    // Tile grid.
+    const grid = document.createElement('div');
+    grid.className = 'explorer-grid';
+    grid.dataset.tabId = tabId;
+    grid.dataset.parentId = folderId || '';
+
+    // Drop on empty grid area = drop into current folder.
+    grid.addEventListener('dragover', (e) => {
+      if (!e.dataTransfer.types.includes('application/x-linkflow')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      grid.classList.add('drop-target');
+    });
+    grid.addEventListener('dragleave', (e) => {
+      if (e.target === grid) grid.classList.remove('drop-target');
+    });
+    grid.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      grid.classList.remove('drop-target');
+      let payload;
+      try { payload = JSON.parse(e.dataTransfer.getData('application/x-linkflow')); }
+      catch { return; }
+      if (!payload?.id) return;
+      if (payload.tabId === tabId && (payload.parentId || null) === (folderId || null)) return;
+      try {
+        await storage.moveBookmark(payload.id, tabId, folderId);
+        await this.render();
+      } catch (err) { uiAlert('Move failed: ' + (err.message || err)); }
+    });
+
+    const folders = allFolders.filter(f => f.parentId === folderId);
+    const links = await storage.getLinks(tabId, folderId);
+    const visibleFolders = folders.filter(f => this.matchesSearch(f.name));
+    const visibleLinks = links.filter(l => this.matchesSearch(l.title) || this.matchesSearch(l.url));
+
+    for (const f of visibleFolders) {
+      grid.appendChild(this.makeExplorerTile({
+        type: 'folder', tabId, folder: f,
+        label: f.name,
+        onOpen: () => {
+          this.path = this.path.concat([{ tabId, folderId: f.id }]);
+          this.currentFolder = f.id;
+          this.saveCurrentView();
+          this.render();
+        }
+      }));
+    }
+    for (const l of visibleLinks) {
+      grid.appendChild(this.makeExplorerTile({
+        type: 'link', tabId, link: l,
+        label: l.title || l.url || 'Untitled',
+        onOpen: () => this.openLinkUrl(l.url)
+      }));
+    }
+
+    if (visibleFolders.length === 0 && visibleLinks.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'explorer-empty';
+      empty.textContent = 'Empty folder';
+      grid.appendChild(empty);
+    }
+
+    container.appendChild(grid);
+    emptyState.style.display = 'none';
+
+    // Reset width back to single-column-ish in explorer mode.
+    document.body.style.minWidth = '480px';
+    try { window.parent?.postMessage({ type: 'linkflow-resize-request', width: 480 }, '*'); } catch (_) {}
+
+    await this.updateTabCounts();
+  }
+
+  makeExplorerTile({ type, tabId, folder, link, label, onOpen }) {
+    const tile = document.createElement('div');
+    tile.className = 'explorer-tile ' + (type === 'folder' ? 'is-folder' : 'is-link');
+    const itemId = type === 'folder' ? folder.id : link.id;
+    const sourceParentId = type === 'folder' ? (folder.parentId || null) : (link.folderId || null);
+
+    // Drag source.
+    tile.draggable = true;
+    tile.addEventListener('dragstart', (e) => {
+      const payload = { kind: type, id: itemId, tabId, parentId: sourceParentId };
+      e.dataTransfer.setData('application/x-linkflow', JSON.stringify(payload));
+      e.dataTransfer.effectAllowed = 'move';
+      tile.classList.add('dragging');
+      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+    });
+    tile.addEventListener('dragend', () => {
+      tile.classList.remove('dragging');
+      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+    });
+
+    // Drop target — only folders accept drop-into.
+    if (type === 'folder') {
+      tile.addEventListener('dragover', (e) => {
+        if (!e.dataTransfer.types.includes('application/x-linkflow')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        tile.classList.add('drop-into');
+      });
+      tile.addEventListener('dragleave', () => tile.classList.remove('drop-into'));
+      tile.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        tile.classList.remove('drop-into');
+        let payload;
+        try { payload = JSON.parse(e.dataTransfer.getData('application/x-linkflow')); }
+        catch { return; }
+        if (!payload?.id || payload.id === folder.id) return;
+        try {
+          await storage.moveBookmark(payload.id, tabId, folder.id);
+          await this.render();
+        } catch (err) { uiAlert('Move failed: ' + (err.message || err)); }
+      });
+    }
+
+    const icon = document.createElement('div');
+    icon.className = 'explorer-tile-icon';
+    if (type === 'folder') {
+      icon.innerHTML = iconSvg('folder');
+    } else {
+      const platIcon = (typeof PlatformDetector !== 'undefined') ? PlatformDetector.getIcon(link.platform) : '';
+      if (platIcon && platIcon.trim().startsWith('<')) icon.innerHTML = platIcon;
+      else icon.textContent = platIcon || '🔗';
+    }
+    tile.appendChild(icon);
+
+    const lbl = document.createElement('div');
+    lbl.className = 'explorer-tile-label';
+    lbl.textContent = label;
+    tile.appendChild(lbl);
+
+    // Right-click → existing context menu.
+    const ctx = type === 'folder'
+      ? { type: 'folder', tabId, folder }
+      : { type: 'link', tabId, link };
+    tile.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.showTreeContextMenu(tile, ctx);
+    });
+    tile.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      // Inline rename within tile label.
+      this.startInlineEdit(tile, lbl, ctx);
+    });
+    tile.addEventListener('click', () => onOpen());
+    return tile;
   }
 
   makeActionRow(tabId, folderId, isTabsColumn = false) {
