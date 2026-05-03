@@ -49,10 +49,21 @@
           <span>Select or start a chat</span>
         </div>
         <div class="ch-messages" id="chMessages"></div>
-        <div class="ch-composer" id="chComposer" hidden>
-          <button class="ch-share-btn" id="chShareBtn" title="Share saved bookmark/folder">🔗</button>
-          <input type="text" id="chInput" placeholder="Type a message…" />
-          <button class="ch-send-btn" id="chSendBtn">Send</button>
+        <div class="ch-composer-wrap" id="chComposerWrap" hidden>
+          <div class="ch-reply-preview" id="chReplyPreview" hidden>
+            <span class="ch-reply-label">Replying to <strong id="chReplyName"></strong></span>
+            <span class="ch-reply-text" id="chReplyText"></span>
+            <button class="ch-reply-clear" id="chReplyClear" title="Cancel reply">×</button>
+          </div>
+          <div class="ch-popover" id="chPopover" hidden></div>
+          <div class="ch-composer" id="chComposer">
+            <button class="ch-share-btn" id="chShareBtn" title="Share / commands">🔗</button>
+            <input type="text" id="chInput" placeholder="Type / for commands, @ to mention…" autocomplete="off" />
+            <button class="ch-send-btn" id="chSendBtn">Send</button>
+          </div>
+          <div class="ch-format-hint">
+            <code>**bold**</code> <code>*italic*</code> <code>~~strike~~</code> <code>__underline__</code> <code>`code`</code>
+          </div>
         </div>
       </main>
     </div>
