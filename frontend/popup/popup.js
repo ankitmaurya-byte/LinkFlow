@@ -96,9 +96,15 @@ class PopupController {
   bindEvents() {
     // Sidebar view items
     document.querySelectorAll('.side-item[data-view]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.switchView(btn.dataset.view);
+      const view = btn.dataset.view;
+      btn.addEventListener('click', () => this.switchView(view));
+      let hoverTimer = null;
+      btn.addEventListener('mouseenter', () => {
+        if (this.viewMode === view) return;
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => this.switchView(view), 200);
       });
+      btn.addEventListener('mouseleave', () => clearTimeout(hoverTimer));
     });
 
     // Save custom link (modal action)
@@ -455,9 +461,19 @@ class PopupController {
         await this.renderTodo();
       });
       row.append(name, edit, del);
-      row.addEventListener('click', async () => {
+      const openProject = async () => {
+        if (this.currentProjectId === p.id) return;
         this.currentProjectId = p.id;
         await this.renderTodo();
+      };
+      row.addEventListener('click', openProject);
+      let hoverTimer = null;
+      row.addEventListener('mouseenter', () => {
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(openProject, 180);
+      });
+      row.addEventListener('mouseleave', () => {
+        clearTimeout(hoverTimer);
       });
       projWrap.appendChild(row);
     }
@@ -1963,11 +1979,14 @@ class PopupController {
         row.innerHTML = `
           <span class="hub-row-icon" data-icon="${m.icon || 'flask'}"></span>
           <span class="hub-row-name" title="${m.desc}">${m.name}</span>`;
-        row.addEventListener('click', () => {
+        const openMod = () => {
+          if (row.classList.contains('selected')) return;
           list.querySelectorAll('.hub-row.selected').forEach(r => r.classList.remove('selected'));
           row.classList.add('selected');
           this.openHubModule(m.name, m.module);
-        });
+        };
+        row.addEventListener('click', openMod);
+        row.addEventListener('mouseenter', openMod);
         list.appendChild(row);
       }
       if (typeof hydrateIcons === 'function') hydrateIcons(list);

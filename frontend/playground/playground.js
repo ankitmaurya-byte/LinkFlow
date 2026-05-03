@@ -162,7 +162,17 @@ class ChatsController {
         <div class="ch-chat-sub">${esc(subtitle)}</div>
       </div>
     `;
-    row.addEventListener('click', () => this.openChat(g));
+    const openIt = () => {
+      if (this.currentChat?.id === g.id) return;
+      this.openChat(g);
+    };
+    row.addEventListener('click', openIt);
+    let hoverTimer = null;
+    row.addEventListener('mouseenter', () => {
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(openIt, 220);
+    });
+    row.addEventListener('mouseleave', () => clearTimeout(hoverTimer));
     return row;
   }
 
