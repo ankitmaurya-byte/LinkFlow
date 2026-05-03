@@ -147,7 +147,17 @@ class NotesController {
         this.renderEditor();
       });
       row.append(title, add, del);
-      row.addEventListener('click', () => this.openNote(n.id));
+      const openIt = () => {
+        if (this.current?.id === n.id) return;
+        this.openNote(n.id);
+      };
+      row.addEventListener('click', openIt);
+      let hoverTimer = null;
+      row.addEventListener('mouseenter', () => {
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(openIt, 180);
+      });
+      row.addEventListener('mouseleave', () => clearTimeout(hoverTimer));
       wrap.appendChild(row);
       const kids = byParent.get(n.id) || [];
       for (const k of kids) renderNode(k, depth + 1);
