@@ -88,32 +88,34 @@
         <iframe class="playground-frame-inline" id="chatsFrameInline" title="Chats"></iframe>
       </div>
 
-      <!-- Playground hub view (new) -->
+      <!-- Playground hub view -->
       <div class="view-hub" id="playgroundView" hidden>
-        <!-- Sub-mode: hub (default) -->
-        <div class="hub-page" id="hubPage">
-          <h2 class="hub-h">Playground</h2>
-          <p class="hub-subtitle">Modular workspace. Add the tools you want.</p>
-
-          <section class="hub-section">
-            <h3>Available modules</h3>
-            <div class="hub-grid" id="hubModules"></div>
-            <button class="btn btn-primary" id="addFeatureBtn">+ Request a feature</button>
-          </section>
-
-          <section class="hub-section">
-            <h3>My feature requests</h3>
-            <div id="featureReqList"></div>
-          </section>
+        <div class="hub-projects" id="hubProjects">
+          <div class="hub-projects-head"><span>Modules</span></div>
+          <!-- module rows populated dynamically -->
         </div>
-
-        <!-- Sub-mode: a single module is mounted full-pane via iframe -->
-        <div class="hub-module-pane" id="hubModulePane" hidden>
-          <div class="hub-module-bar">
-            <button class="btn btn-sm btn-outline" id="hubBackBtn">← Back</button>
-            <span class="hub-module-title" id="hubModuleTitle"></span>
+        <div class="hub-content" id="hubContent">
+          <!-- Default landing -->
+          <div class="hub-page" id="hubPage">
+            <h2 class="hub-h">Playground</h2>
+            <p class="hub-subtitle">Pick a module from the left.</p>
+            <section class="hub-section">
+              <button class="btn btn-primary" id="addFeatureBtn">+ Request a feature</button>
+            </section>
+            <section class="hub-section">
+              <h3>My feature requests</h3>
+              <div id="featureReqList"></div>
+            </section>
           </div>
-          <iframe class="hub-module-frame" id="hubModuleFrame" title="Module"></iframe>
+
+          <!-- Module mounted -->
+          <div class="hub-module-pane" id="hubModulePane" hidden>
+            <div class="hub-module-bar">
+              <button class="btn btn-sm btn-outline" id="hubBackBtn">← Back</button>
+              <span class="hub-module-title" id="hubModuleTitle"></span>
+            </div>
+            <iframe class="hub-module-frame" id="hubModuleFrame" title="Module"></iframe>
+          </div>
         </div>
       </div>
 

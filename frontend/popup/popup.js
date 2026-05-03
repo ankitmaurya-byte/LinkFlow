@@ -1893,33 +1893,35 @@ class PopupController {
     document.getElementById('hubModulePane').hidden = true;
 
     const modules = [
-      { name: 'Tab manager', desc: 'Tabs / sessions / groups / snooze', module: 'tabs/tabs.html' },
-      { name: 'Canvas', desc: 'Drawing board', module: 'canvas/canvas.html' },
-      { name: 'GitHub explorer', desc: 'Repos, commits, issues, PRs', module: 'github/github.html' },
-      { name: 'Feed', desc: 'Posts, comments, likes', module: 'feed/feed.html' },
-      { name: 'Startup explorer', desc: 'HN, Product Hunt, GitHub trending', module: 'startups/startups.html' },
-      { name: 'Clocks', desc: 'Multi-timezone clocks', module: 'clocks/clocks.html' },
-      { name: 'Timer', desc: 'Pomodoro / countdown', module: 'timer/timer.html' },
-      { name: 'Blogs', desc: 'Long-form like Medium', module: 'blogs/blogs.html' },
-      { name: 'Newsletters', desc: 'Subscribe + read RSS', module: 'newsletters/newsletters.html' }
+      { name: 'Tab manager', desc: 'Tabs / sessions / groups / snooze', module: 'tabs/tabs.html', icon: 'grid' },
+      { name: 'Canvas', desc: 'Drawing board', module: 'canvas/canvas.html', icon: 'edit' },
+      { name: 'GitHub explorer', desc: 'Repos, commits, issues, PRs', module: 'github/github.html', icon: 'hash' },
+      { name: 'Feed', desc: 'Posts, comments, likes', module: 'feed/feed.html', icon: 'message' },
+      { name: 'Startup explorer', desc: 'HN, Product Hunt, GitHub trending', module: 'startups/startups.html', icon: 'bulb' },
+      { name: 'Clocks', desc: 'Multi-timezone clocks', module: 'clocks/clocks.html', icon: 'info' },
+      { name: 'Timer', desc: 'Pomodoro / countdown', module: 'timer/timer.html', icon: 'flask' },
+      { name: 'Blogs', desc: 'Long-form like Medium', module: 'blogs/blogs.html', icon: 'briefcase' },
+      { name: 'Newsletters', desc: 'Subscribe + read RSS', module: 'newsletters/newsletters.html', icon: 'inbox' }
     ];
-    const grid = document.getElementById('hubModules');
-    if (grid) {
-      grid.innerHTML = '';
+    const list = document.getElementById('hubProjects');
+    if (list) {
+      // keep header, replace rows
+      list.querySelectorAll('.hub-row').forEach(n => n.remove());
       for (const m of modules) {
-        const card = document.createElement('div');
-        card.className = 'hub-card' + (m.soon ? ' soon' : ' live');
-        card.innerHTML = `
-          <strong>${m.name}</strong>
-          <div class="hub-card-desc">${m.desc}</div>
-          ${m.soon ? '<span class="hub-badge">Soon</span>' : '<span class="hub-badge live-badge">Open</span>'}`;
-        if (!m.soon && m.module) {
-          card.addEventListener('click', () => this.openHubModule(m.name, m.module));
-        } else if (!m.soon && m.external) {
-          card.addEventListener('click', () => this.openLinkUrl(m.external));
-        }
-        grid.appendChild(card);
+        const row = document.createElement('div');
+        row.className = 'hub-row';
+        row.dataset.module = m.module;
+        row.innerHTML = `
+          <span class="hub-row-icon" data-icon="${m.icon || 'flask'}"></span>
+          <span class="hub-row-name" title="${m.desc}">${m.name}</span>`;
+        row.addEventListener('click', () => {
+          list.querySelectorAll('.hub-row.selected').forEach(r => r.classList.remove('selected'));
+          row.classList.add('selected');
+          this.openHubModule(m.name, m.module);
+        });
+        list.appendChild(row);
       }
+      if (typeof hydrateIcons === 'function') hydrateIcons(list);
     }
 
     const back = document.getElementById('hubBackBtn');
@@ -1930,6 +1932,7 @@ class PopupController {
         document.getElementById('hubModulePane').hidden = true;
         const f = document.getElementById('hubModuleFrame');
         if (f) f.src = 'about:blank';
+        document.querySelectorAll('#hubProjects .hub-row.selected').forEach(r => r.classList.remove('selected'));
       });
     }
 
