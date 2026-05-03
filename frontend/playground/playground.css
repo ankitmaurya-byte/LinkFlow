@@ -902,16 +902,6 @@ body.embed-mode .view-description {
 .ch-popover-row.active,
 .ch-popover-row:hover { background: #f1f3f6; }
 
-.ch-format-hint {
-  padding: 4px 12px;
-  font-size: 10px; color: #9297a0;
-  border-top: 1px solid #f1f3f6;
-  display: flex; gap: 8px; flex-wrap: wrap;
-}
-.ch-format-hint code {
-  background: #f1f3f6; padding: 0 4px; font-size: 10px;
-}
-
 .ch-composer {
   display: flex;
   gap: 6px;

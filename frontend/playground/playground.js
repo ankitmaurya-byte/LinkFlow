@@ -349,7 +349,7 @@ class ChatsController {
     if (this.handleSlashOnSend(raw)) { input.value = ''; this.hidePopover(); return; }
     const mentions = extractMentions(raw);
     try {
-      await api.authedFetch(`/groups/${this.currentChat.id}/chat`, {
+      const res = await api.authedFetch(`/groups/${this.currentChat.id}/chat`, {
         method: 'POST',
         body: {
           kind: 'text',
@@ -361,15 +361,31 @@ class ChatsController {
       input.value = '';
       this.clearReply();
       this.hidePopover();
-      await this.loadMessages();
+      this.appendMessage(res.message);
     } catch (err) { uiAlert(err.message); }
+  }
+
+  appendMessage(m) {
+    if (!m) return;
+    this.messages.push(m);
+    const wrap = document.getElementById('chMessages');
+    wrap.appendChild(this.renderMessageCard(m));
+    wrap.scrollTop = wrap.scrollHeight;
   }
 
   handleSlashOnSend(raw) {
     const lower = raw.toLowerCase();
     if (lower === '/help' || lower === '/') {
-      const lines = SLASH_COMMANDS.map(c => `${c.cmd} — ${c.desc}`).join('\n');
-      uiAlert('Commands:\n\n' + lines);
+      const cmds = SLASH_COMMANDS.map(c => `${c.cmd} — ${c.desc}`).join('\n');
+      const fmt = [
+        '**bold**          → bold',
+        '*italic*          → italic',
+        '~~strike~~        → strikethrough',
+        '__underline__     → underline',
+        '`code`            → inline code',
+        '@username         → mention'
+      ].join('\n');
+      uiAlert('COMMANDS\n\n' + cmds + '\n\nFORMATTING\n\n' + fmt);
       return true;
     }
     if (lower.startsWith('/send link')) { this.openShareModal('url'); return true; }
@@ -400,14 +416,9 @@ class ChatsController {
   }
 
   async fetchMentionUsers(q, anchor) {
-    if (!q) {
-      // Show recent friends quickly via empty search? Just show empty until typed.
-      this.hidePopover();
-      return;
-    }
     try {
-      const res = await api.authedFetch('/users/search?q=' + encodeURIComponent(q));
-      const users = (res.users || []).slice(0, 8);
+      const res = await api.authedFetch('/users/search?q=' + encodeURIComponent(q || ''));
+      const users = (res.users || []).slice(0, 12);
       if (!users.length) { this.hidePopover(); return; }
       const items = users.map(u => ({ label: '@' + u.username, value: u.username }));
       this.showPopover('mention', items, anchor, 0);
@@ -542,7 +553,7 @@ class ChatsController {
   async sendTodo(t) {
     if (!this.currentChat) return;
     try {
-      await api.authedFetch(`/groups/${this.currentChat.id}/chat`, {
+      const res = await api.authedFetch(`/groups/${this.currentChat.id}/chat`, {
         method: 'POST',
         body: {
           kind: 'todo',
@@ -560,7 +571,7 @@ class ChatsController {
         }
       });
       this.clearReply();
-      await this.loadMessages();
+      this.appendMessage(res.message);
     } catch (err) { uiAlert(err.message); }
   }
 
@@ -653,10 +664,10 @@ class ChatsController {
     }
     if (this.replyTo?.id) body.replyToId = this.replyTo.id;
     try {
-      await api.authedFetch(`/groups/${this.currentChat.id}/chat`, { method: 'POST', body });
+      const res = await api.authedFetch(`/groups/${this.currentChat.id}/chat`, { method: 'POST', body });
       modalManager.close('shareToChatModal');
       this.clearReply();
-      await this.loadMessages();
+      this.appendMessage(res.message);
     } catch (err) { uiAlert(err.message); }
   }
 }

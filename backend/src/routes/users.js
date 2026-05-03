@@ -10,11 +10,32 @@ router.use(requireAuth);
 router.get('/search', async (req, res, next) => {
   try {
     const q = (req.query.q || '').toString().trim().toLowerCase();
-    if (!q) return res.json({ users: [] });
-    const users = await User.find({
-      username: { $regex: '^' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' },
-      _id: { $ne: req.user.id }
-    }).limit(20).select('username');
+    let users;
+    if (!q) {
+      // Empty query: return up to 20 users (friends prioritized, then others).
+      const me = new mongoose.Types.ObjectId(req.user.id);
+      const friendships = await Friendship.find({
+        $or: [{ userA: me }, { userB: me }],
+        status: 'accepted'
+      }).limit(20);
+      const friendIds = friendships
+        .map(f => f.userA.equals(me) ? f.userB : f.userA);
+      const friendUsers = friendIds.length
+        ? await User.find({ _id: { $in: friendIds } }).limit(20).select('username')
+        : [];
+      let extras = [];
+      if (friendUsers.length < 20) {
+        extras = await User.find({
+          _id: { $nin: [me, ...friendIds] }
+        }).limit(20 - friendUsers.length).select('username');
+      }
+      users = [...friendUsers, ...extras];
+    } else {
+      users = await User.find({
+        username: { $regex: '^' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' },
+        _id: { $ne: req.user.id }
+      }).limit(20).select('username');
+    }
 
     const me = new mongoose.Types.ObjectId(req.user.id);
     const ids = users.map(u => u._id);
