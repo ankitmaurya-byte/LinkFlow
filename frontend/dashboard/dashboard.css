@@ -2,21 +2,21 @@
 
 /* DESIGN.md tokens — Airtable */
 :root {
-  --primary: #181d26;
-  --primary-active: #0d1218;
-  --primary-light: #f8fafc;
-  --primary-hover: #0d1218;
-  --secondary: #1b61c9;
+  --primary: var(--ink);
+  --primary-active: var(--shoe);
+  --primary-light: var(--cream-soft);
+  --primary-hover: var(--shoe);
+  --secondary: var(--blue);
 
-  --ink: #181d26;
+  --ink: var(--ink);
   --body: #333840;
-  --muted: #41454d;
-  --hairline: #dddddd;
-  --border-strong: #9297a0;
-  --canvas: #ffffff;
-  --surface-soft: #f8fafc;
-  --surface-strong: #e0e2e6;
-  --surface-dark: #181d26;
+  --muted: var(--ink-soft);
+  --hairline: var(--clay-soft);
+  --border-strong: var(--muted);
+  --canvas: var(--cream);
+  --surface-soft: var(--cream-soft);
+  --surface-strong: var(--cream-deep);
+  --surface-dark: var(--ink);
 
   --bg-primary: var(--canvas);
   --bg-secondary: var(--surface-soft);
@@ -25,9 +25,9 @@
   --text-secondary: var(--body);
   --text-tertiary: var(--muted);
   --border: var(--hairline);
-  --success: #006400;
-  --danger: #aa2d00;
-  --link: #1b61c9;
+  --success: var(--leaf);
+  --danger: var(--terracotta);
+  --link: var(--blue);
 
   --shadow-sm: 0 0 0 1px var(--hairline);
   --shadow: 0 0 0 1px var(--hairline);
@@ -56,7 +56,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  border-radius: 0 !important;
   transition:
     background-color 0.28s ease,
     color 0.28s ease,
@@ -90,7 +89,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: var(--space-xl) var(--space-2xl);
-  background: white;
+  background: var(--cream);
   border-bottom: 1px solid var(--border);
 }
 
@@ -124,7 +123,7 @@ body {
 /* Sidebar */
 .sidebar {
   width: 280px;
-  background: white;
+  background: var(--cream);
   border-right: 1px solid var(--border);
   padding: var(--space-xl);
   display: flex;
@@ -177,7 +176,7 @@ body {
 
 .tab-btn.active .tab-count {
   background: var(--primary);
-  color: white;
+  color: var(--cream);
 }
 
 .sidebar-actions {
@@ -261,7 +260,7 @@ body {
 }
 
 .view-mode-btn.active {
-  background: white;
+  background: var(--cream);
   color: var(--text-primary);
   font-weight: 500;
   box-shadow: var(--shadow-sm);
@@ -370,7 +369,7 @@ body {
   position: absolute;
   right: var(--space-lg);
   top: calc(100% - 10px);
-  background: white;
+  background: var(--cream);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
@@ -402,7 +401,7 @@ body {
 }
 
 .dropdown-item.danger:hover {
-  background: #fef2f2;
+  background: rgba(196,104,72,0.08);
 }
 
 .folder-card {
@@ -414,7 +413,7 @@ body {
 }
 
 .folder-card:hover {
-  background: #ede9fe;
+  background: rgba(196,104,72,0.18);
 }
 
 .folder-icon {
@@ -479,7 +478,7 @@ body {
 
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: var(--cream);
   box-shadow: var(--shadow-md);
 }
 
@@ -489,7 +488,7 @@ body {
 }
 
 .btn-secondary {
-  background: white;
+  background: var(--cream);
   color: var(--text-primary);
   border: 1px solid var(--border);
 }
@@ -514,7 +513,7 @@ body {
 
 .btn-danger {
   background: var(--danger);
-  color: white;
+  color: var(--cream);
 }
 
 /* Form Elements */
@@ -576,7 +575,7 @@ body {
 }
 
 .modal-content {
-  background: white;
+  background: var(--cream);
   border-radius: var(--radius-lg);
   width: 90%;
   max-width: 500px;

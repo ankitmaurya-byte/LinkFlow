@@ -1,4 +1,4 @@
-# LinkFlow - Firefox Browser Extension
+# urlgram - Firefox Browser Extension
 
 A modern, clean Firefox extension for managing and organizing links with folders, tabs, and an AI-powered research playground.
 
@@ -55,7 +55,7 @@ A modern, clean Firefox extension for managing and organizing links with folders
 
 ### Using the Extension
 
-1. **Click the LinkFlow icon** in your toolbar to open the popup
+1. **Click the urlgram icon** in your toolbar to open the popup
 
 2. **Save the current tab**: Click "+ Save Current Tab" to save the active browser tab
 
@@ -184,4 +184,4 @@ This extension is provided as-is for personal use.
 
 **Built with 💜 by Antigravity**
 
-Enjoy organizing your links with LinkFlow!
+Enjoy organizing your links with urlgram!

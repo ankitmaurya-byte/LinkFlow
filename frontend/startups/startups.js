@@ -8,7 +8,7 @@
 
   const HN = 'https://hacker-news.firebaseio.com/v0';
   const list = document.getElementById('suList');
-  const CACHE_PREFIX = 'linkflow.startups.cache.';
+  const CACHE_PREFIX = 'urlgram.startups.cache.';
   const STALE_NOTE_ID = 'suStaleNote';
   let currentTab = 'hn-top';
   let inflight = false;

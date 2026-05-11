@@ -19,7 +19,7 @@ function createLoginOverlay({ onAuthed } = {}) {
     <div class="login-card">
       <div class="login-header">
         <div class="app-icon">${LF_ICONS.brand}</div>
-        <h2 class="login-title">LinkFlow</h2>
+        <h2 class="login-title">urlgram</h2>
         <p class="login-subtitle" data-role="subtitle">Sign in to sync bookmarks across devices</p>
       </div>
       <div class="login-tabs">

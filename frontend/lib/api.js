@@ -1,8 +1,8 @@
-// Backend API wrapper for LinkFlow extension.
+// Backend API wrapper for urlgram extension.
 // Storage: browser.storage.local under keys `auth.accessToken`, `auth.refreshToken`, `auth.user`.
 
-const API_BASE = 'http://localhost:4000';
-// const API_BASE = 'https://linkflow-be.vercel.app';
+// const API_BASE = 'http://localhost:4000';
+const API_BASE = 'https://linkflow-be.vercel.app';
 const TOKEN_KEYS = {
   access: 'auth.accessToken',
   refresh: 'auth.refreshToken',

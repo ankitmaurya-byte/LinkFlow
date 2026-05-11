@@ -1,9 +1,9 @@
-// Floating LinkFlow widget injected on every page.
+// Floating urlgram widget injected on every page.
 // Bubble in bottom-right; hover to expand quick actions + recent links.
 
 (function () {
-  if (window.__linkflowFloatingInjected) return;
-  window.__linkflowFloatingInjected = true;
+  if (window.__urlgramFloatingInjected) return;
+  window.__urlgramFloatingInjected = true;
 
   const browserApi = (typeof browser !== 'undefined') ? browser : chrome;
 
@@ -34,7 +34,7 @@
   }
   // If site blocked, abort injection entirely.
   shouldShowOnThisSite().then(ok => {
-    if (!ok) { window.__linkflowFloatingBlocked = true; return; }
+    if (!ok) { window.__urlgramFloatingBlocked = true; return; }
     initFloating();
   });
   function initFloating() {
@@ -45,7 +45,7 @@
   let currentPos = { x: 16, y: 16, anchor: 'tl' }; // anchor: which corner to derive from
 
   const host = document.createElement('div');
-  host.id = 'linkflow-floating-host';
+  host.id = 'urlgram-floating-host';
   host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647;';
   const root = host.attachShadow({ mode: 'open' });
   applyHostPosition(currentPos);
@@ -93,23 +93,30 @@
   style.textContent = `
     :host, * {
       box-sizing: border-box;
-      border-radius: 0 !important;
       scrollbar-width: none !important;
       -ms-overflow-style: none !important;
       transition:
-        background-color 0.28s ease,
-        color 0.28s ease,
-        border-color 0.28s ease,
-        box-shadow 0.28s ease,
-        opacity 0.28s ease,
-        transform 0.28s ease,
-        width 0.32s ease,
-        height 0.32s ease;
+        background-color 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        color 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        border-color 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        box-shadow 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        opacity 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1),
+        width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+        height 0.42s cubic-bezier(0.22, 1, 0.36, 1);
     }
     *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+    @keyframes lfBubbleFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-2px); }
+    }
+    @keyframes lfPanelPop {
+      from { opacity: 0; transform: scale(0.96) translateY(-6px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
     .wrap {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: #111827;
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #2a1c14;
       position: relative;
       width: 100px;
       height: 79px;
@@ -118,9 +125,14 @@
       position: fixed;
       left: 0;
       top: 0;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(24, 29, 38, 0.12), 0 0 0 1px #dddddd;
+      background: rgba(255, 246, 236, 0.94);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 14px;
+      box-shadow:
+        0 24px 48px -16px rgba(90, 60, 40, 0.32),
+        0 6px 16px -6px rgba(90, 60, 40, 0.18),
+        0 0 0 1px rgba(201, 164, 134, 0.42);
       overflow: hidden;
     }
     .bubble {
@@ -133,6 +145,11 @@
       cursor: grab;
       user-select: none;
       touch-action: none;
+      filter: drop-shadow(0 6px 14px rgba(90, 60, 40, 0.22));
+      animation: lfBubbleFloat 5.5s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+    }
+    .bubble:hover {
+      filter: drop-shadow(0 10px 22px rgba(196, 104, 72, 0.32));
     }
     .bubble img {
       width: 100px;
@@ -142,13 +159,16 @@
     }
     .bubble.dragging {
       cursor: grabbing;
+      animation: none;
+      filter: drop-shadow(0 14px 28px rgba(90, 60, 40, 0.4));
     }
     .bubble.locked::after {
       content: '';
       position: absolute;
       inset: 0;
-      background-color: rgba(24, 29, 38, 0.55);
-      background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='28' height='28' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E");
+      border-radius: 50%;
+      background-color: rgba(42, 28, 20, 0.55);
+      background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='28' height='28' fill='none' stroke='%23fff6ec' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0110 0v4'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: center;
       pointer-events: none;
@@ -160,17 +180,19 @@
       min-height: 300px;
       max-width: calc(100vw - 32px);
       max-height: calc(100vh - 32px);
-      background: #ffffff;
-      box-shadow: 0 10px 30px rgba(24, 29, 38, 0.12), 0 0 0 1px #dddddd;
       overflow: hidden;
       display: none;
       flex-direction: column;
     }
-    .wrap.open .panel { display: flex; }
+    .wrap.open .panel {
+      display: flex;
+      animation: lfPanelPop 320ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
     .panel-frame {
       flex: 1;
       width: 100%;
       border: 0;
+      border-radius: 12px;
     }
     .resize-handle {
       position: absolute;
@@ -183,8 +205,9 @@
     .resize-handle::after {
       content: '';
       position: absolute;
-      width: 8px; height: 8px;
-      background: linear-gradient(135deg, transparent 50%, #9297a0 50%);
+      width: 9px; height: 9px;
+      background: linear-gradient(135deg, transparent 50%, #c9a486 50%);
+      border-bottom-right-radius: 12px;
     }
     .resize-handle.br::after { right: 2px; bottom: 2px; }
   `;
@@ -196,17 +219,17 @@
   const panel = document.createElement('div');
   panel.className = 'panel';
   panel.innerHTML = `
-    <iframe class="panel-frame" data-frame title="LinkFlow"></iframe>
+    <iframe class="panel-frame" data-frame title="urlgram"></iframe>
     <div class="resize-handle br" data-corner="br"></div>
   `;
   const frame = panel.querySelector('[data-frame]');
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
-  bubble.title = 'LinkFlow';
+  bubble.title = 'urlgram';
   const bubbleIcon = document.createElement('img');
   bubbleIcon.src = browserApi.runtime.getURL('icons/float.svg');
-  bubbleIcon.alt = 'LinkFlow';
+  bubbleIcon.alt = 'urlgram';
   bubbleIcon.draggable = false;
   bubble.appendChild(bubbleIcon);
 
@@ -318,7 +341,7 @@
   }, true);
 
   window.addEventListener('message', (e) => {
-    if (e?.data?.type === 'linkflow-drag') {
+    if (e?.data?.type === 'urlgram-drag') {
       if (e.data.state === 'start') {
         dragLock = true;
         if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
@@ -327,7 +350,7 @@
       }
       return;
     }
-    if (e?.data?.type === 'linkflow-resize-request') {
+    if (e?.data?.type === 'urlgram-resize-request') {
       const w = Number(e.data.width);
       if (Number.isFinite(w) && w > PANEL_MIN_W) {
         PANEL_W = clampSize(w, PANEL_MIN_W, window.innerWidth - 16);

@@ -1,32 +1,32 @@
-html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #ffffff; color: #181d26; }
+html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cream); color: var(--ink); }
 .ck-app { padding: 16px; }
 .ck-bar { display: flex; gap: 8px; margin-bottom: 16px; }
 .ck-bar input, .ck-bar select {
-  padding: 6px 10px; border: 1px solid #dddddd; font-size: 13px; font-family: inherit;
+  padding: 6px 10px; border: 1px solid var(--clay-soft); font-size: 13px; font-family: inherit;
   flex: 1;
 }
 .ck-bar button {
-  padding: 6px 14px; border: 0; background: #181d26; color: #ffffff; cursor: pointer; font-size: 13px;
+  padding: 6px 14px; border: 0; background: var(--ink); color: var(--cream); cursor: pointer; font-size: 13px;
 }
-.ck-bar button:hover { background: #0d1218; }
+.ck-bar button:hover { background: var(--shoe); }
 .ck-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
 .ck-card {
-  border: 1px solid #dddddd;
+  border: 1px solid var(--clay-soft);
   padding: 14px;
   position: relative;
-  background: #f8fafc;
+  background: var(--cream-soft);
 }
-.ck-label { font-size: 13px; color: #41454d; margin-bottom: 4px; }
+.ck-label { font-size: 13px; color: var(--ink-soft); margin-bottom: 4px; }
 .ck-time { font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.ck-date { font-size: 12px; color: #6b7280; margin-top: 2px; }
-.ck-tz { font-size: 11px; color: #9297a0; margin-top: 6px; }
+.ck-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ck-tz { font-size: 11px; color: var(--muted); margin-top: 6px; }
 .ck-del {
   position: absolute; top: 6px; right: 6px;
-  background: transparent; border: 0; cursor: pointer; color: #6b7280; font-size: 14px;
+  background: transparent; border: 0; cursor: pointer; color: var(--muted); font-size: 14px;
 }
-.ck-del:hover { color: #aa2d00; }
-.ck-empty { color: #6b7280; font-size: 13px; padding: 16px 0; }
+.ck-del:hover { color: var(--terracotta); }
+.ck-empty { color: var(--muted); font-size: 13px; padding: 16px 0; }

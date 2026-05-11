@@ -1,15 +1,15 @@
-// Manual two-way merge between LinkFlow (server) and browser bookmarks toolbar.
+// Manual two-way merge between urlgram (server) and browser bookmarks toolbar.
 //
 // Rules:
 //  - Sync target is the browser's bookmarks toolbar only (Firefox `toolbar_____` /
 //    Chrome `1`). Other roots (Other Bookmarks, Mobile, etc.) are ignored.
-//  - LinkFlow → browser: create missing nodes, update title/url for mapped nodes.
-//  - Browser → LinkFlow: create missing entries (additive only). Browser-side
-//    edits to mapped nodes are NOT pushed back to LinkFlow.
+//  - urlgram → browser: create missing nodes, update title/url for mapped nodes.
+//  - Browser → urlgram: create missing entries (additive only). Browser-side
+//    edits to mapped nodes are NOT pushed back to urlgram.
 //  - No deletes either way. "No loss" guarantee.
 //  - Idempotent — clicking Sync after everything is in sync is a no-op.
 
-const SYNC_ROOT_TITLE = 'LinkFlow';
+const SYNC_ROOT_TITLE = 'urlgram';
 
 class BookmarkSync {
   constructor() {
@@ -28,11 +28,11 @@ class BookmarkSync {
       if (!toolbarId) throw new Error('Could not find browser bookmarks toolbar');
 
       const map = await this.loadMap();
-      const rootId = await this.ensureLinkFlowRoot(toolbarId, map);
+      const rootId = await this.ensureurlgramRoot(toolbarId, map);
 
-      const lfList = await this.fetchLinkFlowList();
+      const lfList = await this.fetchurlgramList();
 
-      await this.pushLinkFlow(lfList, rootId, map);
+      await this.pushurlgram(lfList, rootId, map);
       await this.pullBrowser(rootId, null, map);
 
       await this.saveMap(map);
@@ -63,12 +63,12 @@ class BookmarkSync {
     return null;
   }
 
-  async ensureLinkFlowRoot(toolbarId, map) {
+  async ensureurlgramRoot(toolbarId, map) {
     if (map.rootId) {
       const node = await this.getNode(map.rootId);
       if (node && node.parentId === toolbarId) return map.rootId;
     }
-    // Look for an existing top-level LinkFlow folder under toolbar.
+    // Look for an existing top-level urlgram folder under toolbar.
     const children = await browser.bookmarks.getChildren(toolbarId);
     const found = children.find(c => !c.url && c.title === SYNC_ROOT_TITLE);
     if (found) {
@@ -83,9 +83,9 @@ class BookmarkSync {
   // === map storage ===
   async loadMap() {
     const { bookmarkMap = {} } = await browser.storage.local.get('bookmarkMap');
-    bookmarkMap.folders ??= {};        // linkflowId -> browserBmId
+    bookmarkMap.folders ??= {};        // urlgramId -> browserBmId
     bookmarkMap.links ??= {};
-    bookmarkMap.reverseFolders ??= {}; // browserBmId -> linkflowId
+    bookmarkMap.reverseFolders ??= {}; // browserBmId -> urlgramId
     bookmarkMap.reverseLinks ??= {};
     return bookmarkMap;
   }
@@ -99,8 +99,8 @@ class BookmarkSync {
     catch (_) { return null; }
   }
 
-  // === LinkFlow → browser ===
-  async fetchLinkFlowList() {
+  // === urlgram → browser ===
+  async fetchurlgramList() {
     const data = await api.authedFetch('/bookmarks?tab=root');
     return data.bookmarks || [];
   }
@@ -119,7 +119,7 @@ class BookmarkSync {
     return out;
   }
 
-  async pushLinkFlow(items, rootId, map) {
+  async pushurlgram(items, rootId, map) {
     const folders = items.filter(b => b.kind === 'folder');
     const links = items.filter(b => b.kind === 'link');
 
@@ -163,7 +163,7 @@ class BookmarkSync {
     }
   }
 
-  // === browser → LinkFlow (additive only) ===
+  // === browser → urlgram (additive only) ===
   async pullBrowser(browserParentId, lfParentId, map) {
     const children = await browser.bookmarks.getChildren(browserParentId);
     for (const ch of children) {
@@ -186,7 +186,7 @@ class BookmarkSync {
             map.reverseLinks[ch.id] = newId;
           }
         } catch (err) {
-          console.warn('LinkFlow sync: failed to import link', ch.url, err);
+          console.warn('urlgram sync: failed to import link', ch.url, err);
         }
       } else {
         // folder
@@ -208,7 +208,7 @@ class BookmarkSync {
               map.reverseFolders[ch.id] = lfId;
             }
           } catch (err) {
-            console.warn('LinkFlow sync: failed to import folder', ch.title, err);
+            console.warn('urlgram sync: failed to import folder', ch.title, err);
           }
         }
         if (lfId) {

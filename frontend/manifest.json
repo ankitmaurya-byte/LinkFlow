@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "LinkFlow",
-  "version": "1.0.7",
+  "name": "urlgram",
+  "version": "1.0.8",
     "browser_specific_settings": {
     "gecko": {
       "id": "ankitmaurya2989@gmail.com",
@@ -12,9 +12,9 @@
   },
   "description": "A modern bookmark manager with folder organization and AI-powered research playground",
   "icons": {
-    "16": "icons/icon-16.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
+    "16": "icons/icon-16.svg",
+    "48": "icons/icon-48.svg",
+    "128": "icons/icon-128.svg"
   },
   "permissions": [
     "storage",
@@ -26,15 +26,15 @@
     "tabGroups"
   ],
   "host_permissions": [
-    "http://localhost:4000/*"
+    "https://linkflow-be.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "icons/icon-16.png",
-      "48": "icons/icon-48.png"
+      "16": "icons/icon-16.svg",
+      "48": "icons/icon-48.svg"
     },
-    "default_title": "LinkFlow"
+    "default_title": "urlgram"
   },
   "background": {
     "scripts": [

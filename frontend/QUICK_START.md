@@ -1,4 +1,4 @@
-# Quick Start Guide - LinkFlow Extension
+# Quick Start Guide - urlgram Extension
 
 ## 🚀 Load Extension in Firefox
 
@@ -20,7 +20,7 @@
 
 6. **Select** the file: `manifest.json`
 
-7. **Done!** The LinkFlow icon should appear in your browser toolbar
+7. **Done!** The urlgram icon should appear in your browser toolbar
 
 ---
 
@@ -30,7 +30,7 @@
 
 #### 1️⃣ Save Your First Link
 1. Go to any website (e.g., github.com)
-2. Click the LinkFlow icon in toolbar
+2. Click the urlgram icon in toolbar
 3. Click "+ Save Current Tab"
 4. ✓ Link saved with GitHub icon!
 

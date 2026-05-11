@@ -108,11 +108,11 @@
       e.dataTransfer.setData('text/tab-id', String(t.id));
       e.dataTransfer.effectAllowed = 'move';
       row.classList.add('dragging');
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'start' }, '*'); } catch (_) {}
     });
     row.addEventListener('dragend', () => {
       row.classList.remove('dragging');
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'end' }, '*'); } catch (_) {}
     });
     row.addEventListener('dragover', (e) => {
       e.preventDefault();

@@ -1,4 +1,4 @@
-// Notion-lite block editor for LinkFlow notes.
+// Notion-lite block editor for urlgram notes.
 // Block kinds: paragraph, h1, h2, h3, bullet, numbered, todo, code, divider, image, callout, quote.
 // Slash menu opens on '/' at start of empty block.
 

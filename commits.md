@@ -1,6 +1,6 @@
 # Engineering Contributions — Last 12 Months (2025-05-01 → 2026-05-01)
 
-Repo: `bookmark` (LinkFlow — browser-extension bookmark manager + Express/Mongo backend)
+Repo: `bookmark` (urlgram — browser-extension bookmark manager + Express/Mongo backend)
 Stack: Node.js 20 · Express 4 · Mongoose 8 · MongoDB · JWT · bcrypt · Vitest · Manifest V3 (Firefox/Chrome) · vanilla JS frontend · Vercel serverless
 
 > Solo project — both author identities (`alsoarpit16@gmail.com`, `ankitmaurya2989@gmail.com`) are the same person (Ankit). Part 2 therefore groups related commits into shipped features rather than highlighting a separate team.
@@ -9,12 +9,12 @@ Stack: Node.js 20 · Express 4 · Mongoose 8 · MongoDB · JWT · bcrypt · Vite
 
 ## Part 1 — My Contributions (Ankit)
 
-### 1. Two-way browser-bookmark sync (LinkFlow ↔ browser toolbar)
+### 1. Two-way browser-bookmark sync (urlgram ↔ browser toolbar)
 **Commit:** `21430fa` · Date: 2026-05-01
 **File(s):** `frontend/lib/bookmarks-sync.js` (+184/-167), `frontend/popup/popup.js` (+16), `frontend/background.js`, `frontend/manifest.json`, `frontend/popup/popup.html`
 
 **What I built**
-Replaced the previous one-way mirror with a manual two-way merge between the LinkFlow server and the browser's bookmarks toolbar. LinkFlow → browser pushes folder/link creates and title/URL updates; browser → LinkFlow only adds new entries (browser-side edits are not pushed back). No deletes either way ("no loss" guarantee), and the run is idempotent so re-clicking Sync is a no-op. Added a robust toolbar resolver that tries well-known IDs (`toolbar_____`/`1`), then locale title match, then first-folder fallback, plus reverse maps to skip already-imported nodes.
+Replaced the previous one-way mirror with a manual two-way merge between the urlgram server and the browser's bookmarks toolbar. urlgram → browser pushes folder/link creates and title/URL updates; browser → urlgram only adds new entries (browser-side edits are not pushed back). No deletes either way ("no loss" guarantee), and the run is idempotent so re-clicking Sync is a no-op. Added a robust toolbar resolver that tries well-known IDs (`toolbar_____`/`1`), then locale title match, then first-folder fallback, plus reverse maps to skip already-imported nodes.
 
 **Resume bullet**
 > Built bidirectional, idempotent sync between a custom bookmark service and the native browser bookmarks API with cross-vendor toolbar resolution and additive-only conflict policy.
@@ -58,7 +58,7 @@ async pullBrowser(browserParentId, lfParentId, map) {
 **File(s):** `frontend/background.js` (-43), `frontend/lib/bookmarks-sync.js` (-239), `frontend/manifest.json`
 
 **What I built**
-Deleted the old `BookmarkSync` listener that auto-mirrored every storage change into a "LinkFlow" subfolder under "Other Bookmarks". Pulled the script tag from `manifest.json` and the wiring from `background.js`. This unblocked the manual two-way merge that landed the next day by removing the auto-runner that would have fought the new flow.
+Deleted the old `BookmarkSync` listener that auto-mirrored every storage change into a "urlgram" subfolder under "Other Bookmarks". Pulled the script tag from `manifest.json` and the wiring from `background.js`. This unblocked the manual two-way merge that landed the next day by removing the auto-runner that would have fought the new flow.
 
 **Resume bullet**
 > Decommissioned an auto-firing one-way sync subsystem to make room for a manual bidirectional merge model.
@@ -222,7 +222,7 @@ function clampToViewport(x, y) {
 **File(s):** `DESIGN.md` +554 (new), `frontend/popup/popup.css` +112/-79, `frontend/dashboard/dashboard.css` +44/-40, `frontend/playground/playground.css` +47/-43, plus icon refresh
 
 **What I built**
-Authored `DESIGN.md`, a YAML-front-matter design spec defining the LinkFlow palette (`signature-coral`, `signature-forest`, etc.), Haas Grotesk type scale, hairline `#dddddd` borders, and pill-CTA primaries. Re-themed popup, dashboard, and playground CSS to match, and replaced raster icons with smaller versions.
+Authored `DESIGN.md`, a YAML-front-matter design spec defining the urlgram palette (`signature-coral`, `signature-forest`, etc.), Haas Grotesk type scale, hairline `#dddddd` borders, and pill-CTA primaries. Re-themed popup, dashboard, and playground CSS to match, and replaced raster icons with smaller versions.
 
 **Resume bullet**
 > Authored a versioned design spec (palette, typography, button system) and rolled it across three frontend surfaces in a single coherent pass.
@@ -421,7 +421,7 @@ async loadCurrentView() {
 **File(s):** 34 files, +6378/-2 (new modules: `dashboard.{html,css,js}`, `popup.{html,css,js}`, `bookmarks.html`, `components/{breadcrumbs,folder-card,link-card,login-form,modal}.js`, `lib/{api,auth,bookmarks-import,bookmarks-sync,storage}.js`, `background.js`, manifest, icons; backend: `middleware/cors.js`, rate-limit tweak)
 
 **What I built**
-Bootstrapped the entire frontend extension: Manifest V3 with `bookmarks/storage/tabs/alarms/unlimitedStorage` permissions, login form (`AuthManager` with token + refresh), API wrapper, bookmarks importer that parses Netscape `<DL><DT>` HTML and unwraps system folder names ("Bookmarks Toolbar", "Other Bookmarks", etc.), URL normalizer, and a one-way `BookmarkSync` mirror into a "LinkFlow" subfolder. Added dashboard and popup with components for breadcrumbs / folder-card / link-card / modal.
+Bootstrapped the entire frontend extension: Manifest V3 with `bookmarks/storage/tabs/alarms/unlimitedStorage` permissions, login form (`AuthManager` with token + refresh), API wrapper, bookmarks importer that parses Netscape `<DL><DT>` HTML and unwraps system folder names ("Bookmarks Toolbar", "Other Bookmarks", etc.), URL normalizer, and a one-way `BookmarkSync` mirror into a "urlgram" subfolder. Added dashboard and popup with components for breadcrumbs / folder-card / link-card / modal.
 
 **Resume bullet**
 > Bootstrapped a Manifest V3 browser extension (popup, dashboard, content overlay) with auth, REST client, Netscape bookmarks importer, and one-way browser-bookmark mirroring.
@@ -1214,7 +1214,7 @@ volumes:
 
 ### 43. Backend core implementation plan + design spec
 **Commit:** `35789ed` + `f897751` · Date: 2026-04-25
-**File(s):** `docs/superpowers/plans/2026-04-25-backend-core.md` +2795, plus `LinkFlow Spec A` design doc
+**File(s):** `docs/superpowers/plans/2026-04-25-backend-core.md` +2795, plus `urlgram Spec A` design doc
 
 **What I built**
 Authored a 24-task TDD implementation plan plus the design spec it traces to (auth, bookmarks, friends, groups, group folders, chat, share, todos). Each task lists the failing tests to write first, the minimum-passing implementation, and the acceptance criteria; the rest of the April 25 commits are a one-to-one execution of this plan.
@@ -1380,11 +1380,11 @@ for (const c of candidates) {
 **Scope:** `frontend/lib/bookmarks-import.js`, `frontend/lib/bookmarks-sync.js`, `frontend/background.js`, `frontend/popup/popup.{html,js}`
 
 **What it does**
-Imports any browser's exported HTML (Netscape bookmark format) by parsing `<DL><DT>` recursively, unwrapping system folders ("Bookmarks Toolbar", "Other Bookmarks", etc.) and skipping URLs already present anywhere in the extension. Two-way sync against the toolbar resolves cross-vendor IDs, walks LinkFlow → browser (creates + updates), then browser → LinkFlow (additive only), with reverse-maps to skip already-linked nodes. No deletes either way.
+Imports any browser's exported HTML (Netscape bookmark format) by parsing `<DL><DT>` recursively, unwrapping system folders ("Bookmarks Toolbar", "Other Bookmarks", etc.) and skipping URLs already present anywhere in the extension. Two-way sync against the toolbar resolves cross-vendor IDs, walks urlgram → browser (creates + updates), then browser → urlgram (additive only), with reverse-maps to skip already-linked nodes. No deletes either way.
 
 **Key code**
 ```js
-async pushLinkFlow(items, rootId, map) {
+async pushurlgram(items, rootId, map) {
   const folders = items.filter(b => b.kind === 'folder');
   const links   = items.filter(b => b.kind === 'link');
   for (const f of this.topoFolders(folders)) {
@@ -1455,7 +1455,7 @@ export async function resetDb() {
 
 ## Part 3 — Resume Highlights (drop-in copy)
 
-> **Full-Stack Engineer · LinkFlow (personal product)** · 2026 (Node.js, Express, MongoDB/Mongoose, JWT, Vitest, Manifest V3, Vercel)
+> **Full-Stack Engineer · urlgram (personal product)** · 2026 (Node.js, Express, MongoDB/Mongoose, JWT, Vitest, Manifest V3, Vercel)
 >
 > - Built a full bookmark-management product end-to-end: Manifest V3 browser extension (Firefox + Chrome) plus an Express/Mongoose backend deployed on Vercel serverless.
 > - Designed a JWT auth subsystem with HS256 access tokens, opaque rotating refresh tokens stored as `sha256` hashes only, one-time-use rotation, idempotent logout, and per-IP rate limiting; middleware separates `AUTH_EXPIRED` from `AUTH_INVALID` so clients can branch refresh-vs-re-auth.
@@ -1466,5 +1466,5 @@ export async function resetDb() {
 > - Authored a 24-task TDD implementation plan tracing to a written design spec and executed it as 28 sequential test-first commits in one day; backed by Vitest, supertest, and `mongodb-memory-server` with single-fork sequential isolation and `syncIndexes()`-on-reset to eliminate index-race flake.
 > - Shipped a Miller-columns bookmark explorer in vanilla JS (hover-to-drill, inline rename, hover-open context menus, currentColor SVG icon set themed from a published `DESIGN.md`), plus a Linear-style Todo board (projects × custom statuses × tasks) persisted via `chrome.storage.local`.
 > - Wrote a Netscape bookmark-format importer that recursively parses `<DL><DT>` HTML, unwraps locale-specific system folders ("Bookmarks Toolbar" / "Other Bookmarks" / etc.), and dedupes by normalized URL.
-> - Built bidirectional, idempotent sync between LinkFlow and the browser's bookmarks toolbar with cross-vendor toolbar resolution (well-known IDs → locale-title match → first-folder fallback) and additive-only conflict policy ("no loss" guarantee, re-running Sync is a no-op).
+> - Built bidirectional, idempotent sync between urlgram and the browser's bookmarks toolbar with cross-vendor toolbar resolution (well-known IDs → locale-title match → first-folder fallback) and additive-only conflict policy ("no loss" guarantee, re-running Sync is a no-op).
 > - Adapted the Express app for Vercel serverless using a lazily-cached app + Mongoose connection per cold container, with one `vercel.json` rewrite to a single `/api/index` handler — same code paths run locally via Docker-Compose-backed Mongo.

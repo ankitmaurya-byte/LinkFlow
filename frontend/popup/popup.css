@@ -1,23 +1,23 @@
 /* ===== DESIGN SYSTEM (Airtable, per DESIGN.md) ===== */
 :root {
   /* Colors */
-  --primary: #181d26;
-  --primary-active: #0d1218;
-  --primary-light: #f8fafc;        /* used as faint hover/selected surface */
-  --primary-hover: #0d1218;
-  --secondary: #1b61c9;
+  --primary: var(--ink);
+  --primary-active: var(--shoe);
+  --primary-light: var(--cream-soft);        /* used as faint hover/selected surface */
+  --primary-hover: var(--shoe);
+  --secondary: var(--blue);
   --secondary-hover: #1a3866;
 
-  --ink: #181d26;
+  --ink: var(--ink);
   --body: #333840;
-  --muted: #41454d;
-  --hairline: #dddddd;
-  --border-strong: #9297a0;
+  --muted: var(--ink-soft);
+  --hairline: var(--clay-soft);
+  --border-strong: var(--muted);
 
-  --canvas: #ffffff;
-  --surface-soft: #f8fafc;
-  --surface-strong: #e0e2e6;
-  --surface-dark: #181d26;
+  --canvas: var(--cream);
+  --surface-soft: var(--cream-soft);
+  --surface-strong: var(--cream-deep);
+  --surface-dark: var(--ink);
   --surface-dark-elevated: #1d1f25;
 
   --bg-primary: var(--canvas);
@@ -31,15 +31,15 @@
   --border: var(--hairline);
   --border-light: var(--surface-strong);
 
-  --link: #1b61c9;
+  --link: var(--blue);
   --info: #254fad;
   --info-border: #458fff;
-  --success: #006400;
-  --danger: #aa2d00;
-  --warning: #d9a441;
+  --success: var(--leaf);
+  --danger: var(--terracotta);
+  --warning: var(--gold);
 
-  --signature-coral: #aa2d00;
-  --signature-forest: #0a2e0e;
+  --signature-coral: var(--terracotta);
+  --signature-forest: var(--leaf);
   --signature-cream: #f5e9d4;
   --signature-peach: #fcab79;
   --signature-mint: #a8d8c4;
@@ -75,7 +75,12 @@
   --font-display: "Haas Groot Disp", "Inter Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Universal column width */
-  --col-w: 220px;
+  --col-w: 188px;
+}
+
+/* Sidebar collapsed → bump col width slightly to use freed space. */
+.app-shell:not(:has(.sidebar:hover)):not(:has(.settings-menu:not([hidden]))) {
+  --col-w: 200px;
 }
 
 /* ===== RESET & BASE ===== */
@@ -83,7 +88,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  border-radius: 0 !important;
   transition:
     background-color 0.28s ease,
     color 0.28s ease,
@@ -129,8 +133,8 @@ body.embed-mode {
 }
 
 .sidebar {
-  flex: 0 0 48px;
-  width: 48px;
+  flex: 0 0 40px;
+  width: 40px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
   display: flex;
@@ -144,8 +148,8 @@ body.embed-mode {
 
 .sidebar:hover,
 .sidebar.menu-open {
-  flex: 0 0 200px !important;
-  width: 200px !important;
+  flex: 0 0 168px !important;
+  width: 168px !important;
 }
 
 .sidebar.menu-open .side-label {
@@ -159,9 +163,9 @@ body.embed-mode {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
   font-family: var(--font-sans);
   white-space: nowrap;
   transition: background 0.15s;
@@ -178,9 +182,9 @@ body.embed-mode {
 }
 
 .side-icon {
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
-  width: 24px;
+  width: 20px;
   text-align: center;
 }
 
@@ -202,9 +206,9 @@ body.embed-mode {
   bottom: 8px;
   /* Touch sidebar's right edge so cursor crossing from sidebar -> menu never
      leaves both elements (otherwise mouseleave collapses sidebar mid-transition). */
-  left: 48px;
+  left: 40px;
   min-width: 160px;
-  background: white;
+  background: var(--cream);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
@@ -212,7 +216,7 @@ body.embed-mode {
   overflow: hidden;
 }
 /* Keep sidebar expanded as long as menu is open (cursor on menu). */
-.app-shell:has(.settings-menu:not([hidden])) .sidebar { flex: 0 0 200px; width: 200px; }
+.app-shell:has(.settings-menu:not([hidden])) .sidebar { flex: 0 0 168px; width: 168px; }
 .app-shell:has(.settings-menu:not([hidden])) .sidebar .side-label { opacity: 1; }
 
 .settings-menu[hidden] {
@@ -288,7 +292,7 @@ body.embed-mode {
 }
 
 .btn-danger:hover {
-  background: #8b2400;
+  background: var(--terracotta-deep);
 }
 
 .btn-danger-outline {
@@ -356,7 +360,7 @@ body.embed-mode {
 
 .tab-badge {
   background: var(--primary);
-  color: white;
+  color: var(--cream);
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 10px;
@@ -771,7 +775,7 @@ body.embed-mode {
   position: absolute;
   right: var(--space-lg);
   top: calc(100% - 10px);
-  background: white;
+  background: var(--cream);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
   width: 170px;
@@ -814,7 +818,7 @@ body.embed-mode {
 }
 
 .dropdown-item.danger:hover {
-  background: #fef2f2;
+  background: rgba(196,104,72,0.08);
 }
 
 /* ===== FOLDER CARD ===== */
@@ -909,7 +913,7 @@ body.embed-mode {
 }
 
 .modal-content {
-  background: white;
+  background: var(--cream);
   border-radius: var(--radius-lg);
   width: 90%;
   max-width: 400px;
@@ -1304,11 +1308,12 @@ body.embed-mode {
   background: var(--bg-primary);
   position: relative;
   z-index: 4;
+  transition: flex-basis 0.2s, width 0.2s;
 }
-/* Collapse projects column when cursor is in content area. */
+/* Collapse only when cursor on right (content) side. */
 .view-hub:has(.hub-content:hover) .hub-projects {
-  flex: 0 0 48px;
-  width: 48px;
+  flex: 0 0 40px;
+  width: 40px;
   overflow: hidden;
 }
 .hub-projects-head {
@@ -1483,14 +1488,14 @@ body.embed-mode {
   background: var(--bg-primary);
   position: relative;
   z-index: 4;
+  transition: flex-basis 0.2s, width 0.2s;
 }
-/* Collapse only while cursor is on the kanban side (right of projects).
-   Also keep collapsed while a task-detail popover is open (cursor on it
-   counts as kanban-side interaction). */
+/* Collapse only when cursor is on the right (kanban) side, OR a task-detail
+   popover is open. Hovering main sidebar does NOT collapse this. */
 .view-todo:has(.todo-kanban:hover) .todo-projects,
 body:has(.task-detail-modal.anchored) .view-todo .todo-projects {
-  flex: 0 0 48px;
-  width: 48px;
+  flex: 0 0 40px;
+  width: 40px;
   overflow: hidden;
 }
 .todo-projects .proj-row span:not(.proj-edit):not(.proj-del) {
@@ -1499,16 +1504,22 @@ body:has(.task-detail-modal.anchored) .view-todo .todo-projects {
   text-overflow: ellipsis;
 }
 /* When collapsed (kanban hover), hide labels but keep folder icon. */
-.view-todo:has(.todo-kanban:hover) .todo-projects .proj-row::before {
+.view-todo:has(.todo-kanban:hover) .todo-projects .proj-row::before,
+body:has(.task-detail-modal.anchored) .view-todo .todo-projects .proj-row::before {
   margin: 0 auto;
 }
 .view-todo:has(.todo-kanban:hover) .todo-projects .proj-row span,
 .view-todo:has(.todo-kanban:hover) .todo-projects .proj-edit,
 .view-todo:has(.todo-kanban:hover) .todo-projects .proj-del,
-.view-todo:has(.todo-kanban:hover) .todo-projects .todo-projects-head span:first-child {
+.view-todo:has(.todo-kanban:hover) .todo-projects .todo-projects-head span:first-child,
+body:has(.task-detail-modal.anchored) .view-todo .todo-projects .proj-row span,
+body:has(.task-detail-modal.anchored) .view-todo .todo-projects .proj-edit,
+body:has(.task-detail-modal.anchored) .view-todo .todo-projects .proj-del,
+body:has(.task-detail-modal.anchored) .view-todo .todo-projects .todo-projects-head span:first-child {
   display: none;
 }
-.view-todo:has(.todo-kanban:hover) .todo-projects .todo-projects-head {
+.view-todo:has(.todo-kanban:hover) .todo-projects .todo-projects-head,
+body:has(.task-detail-modal.anchored) .view-todo .todo-projects .todo-projects-head {
   justify-content: center; padding: 8px 6px;
 }
 
@@ -1726,7 +1737,7 @@ body:has(.task-detail-modal.anchored) .view-todo .todo-projects {
 }
 
 .kanban-task {
-  background: white;
+  background: var(--cream);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
@@ -1755,11 +1766,11 @@ body:has(.task-detail-modal.anchored) .view-todo .todo-projects {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.kt-prio-highest { background: #fce8e6; color: #aa2d00; }
-.kt-prio-high { background: #feefe3; color: #aa2d00; }
-.kt-prio-low { background: #e6f4ea; color: #006400; }
-.kt-prio-lowest { background: #f1f3f4; color: #6b7280; }
-.kt-type-bug { background: #fce8e6; color: #aa2d00; }
+.kt-prio-highest { background: #fce8e6; color: var(--terracotta); }
+.kt-prio-high { background: #feefe3; color: var(--terracotta); }
+.kt-prio-low { background: #e6f4ea; color: var(--leaf); }
+.kt-prio-lowest { background: #f1f3f4; color: var(--muted); }
+.kt-type-bug { background: #fce8e6; color: var(--terracotta); }
 .kt-type-story { background: #e8f0fe; color: #1a73e8; }
 .kt-type-epic { background: #f3e8fd; color: #9334e6; }
 .kanban-task-expand {

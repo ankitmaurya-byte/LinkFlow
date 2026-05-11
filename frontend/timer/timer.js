@@ -1,5 +1,5 @@
 (function () {
-  const KEY = 'linkflow.timer.v1';
+  const KEY = 'urlgram.timer.v1';
   const display = document.getElementById('tmDisplay');
   const startBtn = document.getElementById('tmStart');
   const pauseBtn = document.getElementById('tmPause');

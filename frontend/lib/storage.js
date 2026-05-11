@@ -29,7 +29,7 @@ class StorageManager {
       this.cache.bookmarksByTab.set(tabId, list);
       return list;
     } catch (err) {
-      console.warn('LinkFlow: bookmarks fetch failed', err);
+      console.warn('urlgram: bookmarks fetch failed', err);
       return [];
     }
   }
@@ -198,7 +198,7 @@ class StorageManager {
       const res = await api.authedFetch('/todos');
       this.cache.todoData = res.data || { projects: [], statuses: {}, tasks: {} };
     } catch (err) {
-      console.warn('LinkFlow: todo fetch failed', err);
+      console.warn('urlgram: todo fetch failed', err);
       this.cache.todoData = { projects: [], statuses: {}, tasks: {} };
     }
     return this.cache.todoData;
@@ -209,7 +209,7 @@ class StorageManager {
     try {
       await api.authedFetch('/todos', { method: 'PUT', body: { data } });
     } catch (err) {
-      console.warn('LinkFlow: todo save failed', err);
+      console.warn('urlgram: todo save failed', err);
     }
   }
 

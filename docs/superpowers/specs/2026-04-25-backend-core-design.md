@@ -1,4 +1,4 @@
-# LinkFlow Backend Core — Design Spec
+# urlgram Backend Core — Design Spec
 
 **Date:** 2026-04-25
 **Scope:** Spec A of 3 (Backend Core). Specs B (frontend refactor) and C (SSE realtime) follow.
@@ -225,7 +225,7 @@ backend/
 
 - **Env vars** (`.env.example`):
   - `PORT` (default 4000)
-  - `MONGO_URL` (default `mongodb://localhost:27017/linkflow`)
+  - `MONGO_URL` (default `mongodb://localhost:27017/urlgram`)
   - `JWT_SECRET` (required, min 32 chars)
   - `CORS_ORIGINS` (comma-separated; extension origin pattern goes here)
 - **Rate limiting:** in-memory bucket on `/auth/login`, `/auth/signup`, `/auth/refresh` — 10/min per IP. Out of scope for non-auth routes.

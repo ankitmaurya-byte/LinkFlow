@@ -61,7 +61,7 @@ router.get('/proxy', async (req, res, next) => {
     if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
       throw new AppError('VALIDATION', 'url required', 400);
     }
-    const r = await fetch(url, { headers: { 'User-Agent': 'LinkFlow/1.0' } });
+    const r = await fetch(url, { headers: { 'User-Agent': 'urlgram/1.0' } });
     if (!r.ok) throw new AppError('UPSTREAM', `Feed HTTP ${r.status}`, 502);
     const xml = await r.text();
     res.type('application/xml').send(xml);

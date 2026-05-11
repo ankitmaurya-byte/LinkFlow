@@ -2,7 +2,7 @@
 // Vector model: shapes[] redrawn each tick. Persists JSON to localStorage.
 
 (function () {
-  const KEY = 'linkflow.canvas.v2';
+  const KEY = 'urlgram.canvas.v2';
   const stage = document.getElementById('cvCanvas');
   const ctx = stage.getContext('2d');
   const stageWrap = stage.parentElement;
@@ -229,7 +229,7 @@
     const url = stage.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'linkflow-canvas-' + Date.now() + '.png';
+    a.download = 'urlgram-canvas-' + Date.now() + '.png';
     a.click();
   });
 

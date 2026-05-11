@@ -1,7 +1,7 @@
 // GitHub explorer — public API. Optional token in localStorage lifts rate limit.
 
 (function () {
-  const TOKEN_KEY = 'linkflow.gh.token';
+  const TOKEN_KEY = 'urlgram.gh.token';
   const API = 'https://api.github.com';
   const list = document.getElementById('ghList');
   const detail = document.getElementById('ghDetail');

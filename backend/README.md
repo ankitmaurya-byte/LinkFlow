@@ -1,6 +1,6 @@
-# LinkFlow Backend
+# urlgram Backend
 
-Node + Express + MongoDB API for the LinkFlow extension.
+Node + Express + MongoDB API for the urlgram extension.
 
 ## Local dev
 

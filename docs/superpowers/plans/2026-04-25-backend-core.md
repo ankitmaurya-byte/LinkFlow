@@ -1,4 +1,4 @@
-# LinkFlow Backend Core Implementation Plan
+# urlgram Backend Core Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -81,7 +81,7 @@ Run all tests from this directory with `npm test`.
 
 ```json
 {
-  "name": "linkflow-backend",
+  "name": "urlgram-backend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -122,7 +122,7 @@ coverage
 
 ```
 PORT=4000
-MONGO_URL=mongodb://localhost:27017/linkflow
+MONGO_URL=mongodb://localhost:27017/urlgram
 JWT_SECRET=change-me-to-a-32-plus-char-secret-string
 JWT_ACCESS_TTL_SECONDS=900
 REFRESH_TTL_DAYS=30
@@ -166,9 +166,9 @@ volumes:
 - [ ] **Step 6: Create `backend/README.md`**
 
 ```md
-# LinkFlow Backend
+# urlgram Backend
 
-Node + Express + MongoDB API for the LinkFlow extension.
+Node + Express + MongoDB API for the urlgram extension.
 
 ## Local dev
 
@@ -247,7 +247,7 @@ const required = ['JWT_SECRET'];
 
 export const config = {
   port: parseInt(process.env.PORT || '4000', 10),
-  mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017/linkflow',
+  mongoUrl: process.env.MONGO_URL || 'mongodb://localhost:27017/urlgram',
   jwtSecret: process.env.JWT_SECRET || 'test-secret-test-secret-test-secret-32',
   jwtAccessTtlSeconds: parseInt(process.env.JWT_ACCESS_TTL_SECONDS || '900', 10),
   refreshTtlDays: parseInt(process.env.REFRESH_TTL_DAYS || '30', 10),

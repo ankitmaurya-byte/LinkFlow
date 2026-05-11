@@ -1,8 +1,8 @@
-// Background service worker for LinkFlow
+// Background service worker for urlgram
 
 // Initialize storage on installation
 browser.runtime.onInstalled.addListener(async () => {
-  console.log('LinkFlow installed');
+  console.log('urlgram installed');
 
   // Initialize default data structure if not exists
   const data = await browser.storage.local.get(['tabs', 'folders', 'links']);

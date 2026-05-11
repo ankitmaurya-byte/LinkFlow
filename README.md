@@ -1,4 +1,4 @@
-# LinkFlow
+# urlgram
 
 A browser extension that turns the new-tab moment into a workspace. Bookmarks, todos, notes, chats, and a pile of small productivity modules all live behind one floating bubble that follows you to every page. Everything is per-user and backend-backed, so a fresh browser install pulls your full state on login.
 
@@ -18,12 +18,12 @@ docs/      Snippets and reference notes
 
 ### Floating bubble (every page)
 
-- LinkFlow icon injected via Shadow DOM on every site that matches the user's site-mode (whitelist-default or blacklist-default — configurable in Settings).
+- urlgram icon injected via Shadow DOM on every site that matches the user's site-mode (whitelist-default or blacklist-default — configurable in Settings).
 - Free drag anywhere; position is clamped to the viewport and persisted across reloads / browser restarts.
 - Click → 720 × 560 panel. Double-click → lock so the panel stays open while you click outside.
 - Panel auto-fits: picks the best of 6 candidate spots so the bubble itself is never inside the panel.
 - Bottom-right resize handle; size persists.
-- Drag start inside the iframe is bridged to the host via `linkflow-drag` `postMessage` so the panel does not close mid-drag.
+- Drag start inside the iframe is bridged to the host via `urlgram-drag` `postMessage` so the panel does not close mid-drag.
 
 ### Popup — Links
 
@@ -170,7 +170,7 @@ npm install
 npm run dev
 ```
 
-The frontend talks to `http://localhost:4000` or `https://linkflow-be.vercel.app` (toggle `API_BASE` in `frontend/lib/api.js`).
+The frontend talks to `http://localhost:4000` or `https://urlgram-be.vercel.app` (toggle `API_BASE` in `frontend/lib/api.js`).
 
 ### Frontend (Firefox)
 

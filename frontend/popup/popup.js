@@ -117,6 +117,22 @@ class PopupController {
     });
     this._reflectLinksViewMode();
 
+    // Sidebar expansion bumps popup width by the delta (168 - 40 = 128).
+    const sidebarEl = document.getElementById('sidebar');
+    if (sidebarEl) {
+      const SIDEBAR_DELTA = 128;
+      const grow = () => this._setSidebarBoost(SIDEBAR_DELTA);
+      const shrink = () => this._setSidebarBoost(0);
+      sidebarEl.addEventListener('mouseenter', grow);
+      sidebarEl.addEventListener('mouseleave', shrink);
+      const menuEl = document.getElementById('settingsMenu');
+      if (menuEl) {
+        menuEl.addEventListener('mouseenter', grow);
+        menuEl.addEventListener('mouseleave', shrink);
+      }
+    }
+
+
     // Track cursor for paste-into-current-column targeting.
     this._cursorTarget = null;
     document.addEventListener('mousemove', (e) => {
@@ -155,7 +171,7 @@ class PopupController {
     document.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       // Lock floating panel close while custom menu open.
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'start' }, '*'); } catch (_) {}
       this.openCustomContextMenu(e);
     });
 
@@ -534,12 +550,9 @@ class PopupController {
       wrap.appendChild(this.renderKanbanCol(projectId, status, tasks));
     }
 
-    // Auto-grow popup width: sidebar(48) + projects(48) + statuses × 220 + add(200).
-    const desired = 48 + 48 + statuses.length * 220 + 200;
-    document.body.style.minWidth = desired + 'px';
-    try {
-      window.parent?.postMessage({ type: 'linkflow-resize-request', width: desired }, '*');
-    } catch (_) {}
+    // Auto-grow popup width: sidebar(40) + projects(200, expanded by default) + statuses × 188 + add(160).
+    const desired = 40 + 200 + statuses.length * 188 + 160;
+    this._setBaseDesiredWidth(desired);
 
     const addCol = document.createElement('button');
     addCol.className = 'kanban-add-col';
@@ -713,11 +726,11 @@ class PopupController {
       e.dataTransfer.setData('text/task', task.id);
       e.dataTransfer.effectAllowed = 'move';
       card.classList.add('dragging');
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'start' }, '*'); } catch (_) {}
     });
     card.addEventListener('dragend', () => {
       card.classList.remove('dragging');
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'end' }, '*'); } catch (_) {}
     });
 
     card.addEventListener('dblclick', () => {
@@ -1029,6 +1042,29 @@ class PopupController {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 
+  _setSidebarBoost(extra) {
+    this._sidebarBoost = extra || 0;
+    this._applyDesiredWidth();
+  }
+
+  _setInnerBoost(extra) {
+    this._innerBoost = extra || 0;
+    this._applyDesiredWidth();
+  }
+
+  _setBaseDesiredWidth(px) {
+    this._baseDesiredWidth = px;
+    this._applyDesiredWidth();
+  }
+
+  _applyDesiredWidth() {
+    const base = this._baseDesiredWidth || 0;
+    const w = base + (this._sidebarBoost || 0) + (this._innerBoost || 0);
+    if (!w) return;
+    document.body.style.minWidth = w + 'px';
+    try { window.parent?.postMessage({ type: 'urlgram-resize-request', width: w }, '*'); } catch (_) {}
+  }
+
   setLinksViewMode(mode) {
     if (mode !== 'column' && mode !== 'explorer') return;
     if (this.linksViewMode === mode) { this._reflectLinksViewMode(); return; }
@@ -1126,15 +1162,11 @@ class PopupController {
 
     emptyState.style.display = 'none';
 
-    // Grow popup width to fit all columns: sidebar (~48) + cols × col-w.
-    const sidebarW = 48;
-    const colW = 220;
+    // Grow popup width to fit all columns: sidebar (~40) + cols × col-w.
+    const sidebarW = 40;
+    const colW = 200;
     const desired = sidebarW + this.path.length * colW;
-    document.body.style.minWidth = desired + 'px';
-    // Ask floating-panel parent to resize iframe accordingly.
-    try {
-      window.parent?.postMessage({ type: 'linkflow-resize-request', width: desired }, '*');
-    } catch (_) {}
+    this._setBaseDesiredWidth(desired);
 
     // Trigger slide-in transition for newly added columns.
     requestAnimationFrame(() => {
@@ -1254,7 +1286,7 @@ class PopupController {
 
     // Drop on empty grid area = drop into current folder.
     grid.addEventListener('dragover', (e) => {
-      if (!e.dataTransfer.types.includes('application/x-linkflow')) return;
+      if (!e.dataTransfer.types.includes('application/x-urlgram')) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       grid.classList.add('drop-target');
@@ -1266,7 +1298,7 @@ class PopupController {
       e.preventDefault();
       grid.classList.remove('drop-target');
       let payload;
-      try { payload = JSON.parse(e.dataTransfer.getData('application/x-linkflow')); }
+      try { payload = JSON.parse(e.dataTransfer.getData('application/x-urlgram')); }
       catch { return; }
       if (!payload?.id) return;
       if (payload.tabId === tabId && (payload.parentId || null) === (folderId || null)) return;
@@ -1312,8 +1344,7 @@ class PopupController {
     emptyState.style.display = 'none';
 
     // Reset width back to single-column-ish in explorer mode.
-    document.body.style.minWidth = '480px';
-    try { window.parent?.postMessage({ type: 'linkflow-resize-request', width: 480 }, '*'); } catch (_) {}
+    this._setBaseDesiredWidth(480);
 
     await this.updateTabCounts();
   }
@@ -1329,20 +1360,20 @@ class PopupController {
     tile.draggable = true;
     tile.addEventListener('dragstart', (e) => {
       const payload = { kind: type, id: itemId, tabId, parentId: sourceParentId };
-      e.dataTransfer.setData('application/x-linkflow', JSON.stringify(payload));
+      e.dataTransfer.setData('application/x-urlgram', JSON.stringify(payload));
       e.dataTransfer.effectAllowed = 'move';
       tile.classList.add('dragging');
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'start' }, '*'); } catch (_) {}
     });
     tile.addEventListener('dragend', () => {
       tile.classList.remove('dragging');
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'end' }, '*'); } catch (_) {}
     });
 
     // Drop target — only folders accept drop-into.
     if (type === 'folder') {
       tile.addEventListener('dragover', (e) => {
-        if (!e.dataTransfer.types.includes('application/x-linkflow')) return;
+        if (!e.dataTransfer.types.includes('application/x-urlgram')) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         tile.classList.add('drop-into');
@@ -1352,7 +1383,7 @@ class PopupController {
         e.preventDefault();
         tile.classList.remove('drop-into');
         let payload;
-        try { payload = JSON.parse(e.dataTransfer.getData('application/x-linkflow')); }
+        try { payload = JSON.parse(e.dataTransfer.getData('application/x-urlgram')); }
         catch { return; }
         if (!payload?.id || payload.id === folder.id) return;
         try {
@@ -1463,7 +1494,7 @@ class PopupController {
         await tabsApi.remove(active.id);
       }
     } catch (err) {
-      console.error('LinkFlow: save & close failed', err);
+      console.error('urlgram: save & close failed', err);
     }
   }
 
@@ -1555,14 +1586,14 @@ class PopupController {
           tabId: contextItem.tabId,
           parentId: sourceParentId
         };
-        e.dataTransfer.setData('application/x-linkflow', JSON.stringify(payload));
+        e.dataTransfer.setData('application/x-urlgram', JSON.stringify(payload));
         e.dataTransfer.effectAllowed = 'move';
         row.classList.add('dragging');
-        try { window.top?.postMessage({ type: 'linkflow-drag', state: 'start' }, '*'); } catch (_) {}
+        try { window.top?.postMessage({ type: 'urlgram-drag', state: 'start' }, '*'); } catch (_) {}
       });
       row.addEventListener('dragend', () => {
         row.classList.remove('dragging');
-        try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+        try { window.top?.postMessage({ type: 'urlgram-drag', state: 'end' }, '*'); } catch (_) {}
       });
     }
 
@@ -1580,7 +1611,7 @@ class PopupController {
                       : (contextItem.type === 'folder') ? contextItem.folder.id : null;
 
       row.addEventListener('dragover', (e) => {
-        if (!e.dataTransfer.types.includes('application/x-linkflow')) return;
+        if (!e.dataTransfer.types.includes('application/x-urlgram')) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         row.classList.remove('drop-into', 'drop-above', 'drop-below');
@@ -1605,7 +1636,7 @@ class PopupController {
                    : row.classList.contains('drop-below') ? 'after' : 'before';
         row.classList.remove('drop-into', 'drop-above', 'drop-below');
         let payload;
-        try { payload = JSON.parse(e.dataTransfer.getData('application/x-linkflow')); }
+        try { payload = JSON.parse(e.dataTransfer.getData('application/x-urlgram')); }
         catch { return; }
         if (!payload || !payload.id) return;
         if (payload.id === rowItemId) return;
@@ -1834,7 +1865,7 @@ class PopupController {
     });
 
     const releaseLock = () => {
-      try { window.top?.postMessage({ type: 'linkflow-drag', state: 'end' }, '*'); } catch (_) {}
+      try { window.top?.postMessage({ type: 'urlgram-drag', state: 'end' }, '*'); } catch (_) {}
     };
     menu.addEventListener('click', releaseLock);
 

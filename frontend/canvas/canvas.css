@@ -3,8 +3,8 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Bl
   display: flex;
   height: 100vh;
   width: 100%;
-  background: #ffffff;
-  color: #181d26;
+  background: var(--cream);
+  color: var(--ink);
 }
 .cv-tools {
   flex: 0 0 56px;
@@ -12,8 +12,8 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Bl
   flex-direction: column;
   gap: 4px;
   padding: 8px 6px;
-  border-right: 1px solid #dddddd;
-  background: #f8fafc;
+  border-right: 1px solid var(--clay-soft);
+  background: var(--cream-soft);
 }
 .cv-tool, .cv-btn {
   width: 40px;
@@ -25,11 +25,11 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Bl
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #181d26;
+  color: var(--ink);
 }
-.cv-tool:hover, .cv-btn:hover { background: #e0e2e6; }
-.cv-tool.active { background: #181d26; color: #ffffff; }
-.cv-sep { height: 1px; background: #dddddd; margin: 6px 0; }
+.cv-tool:hover, .cv-btn:hover { background: var(--cream-deep); }
+.cv-tool.active { background: var(--ink); color: var(--cream); }
+.cv-sep { height: 1px; background: var(--clay-soft); margin: 6px 0; }
 .cv-color, .cv-thick {
   width: 40px;
   height: 28px;
@@ -47,7 +47,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Bl
 }
 #cvCanvas {
   display: block;
-  background: #ffffff;
+  background: var(--cream);
   cursor: crosshair;
   width: 100%;
   height: 100%;
@@ -57,7 +57,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Bl
   min-width: 40px;
   min-height: 24px;
   padding: 2px 4px;
-  border: 1px dashed #181d26;
+  border: 1px dashed var(--ink);
   background: rgba(255,255,255,0.9);
   font-family: inherit;
   outline: none;

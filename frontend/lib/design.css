@@ -1,0 +1,715 @@
+/* ==========================================================================
+   urlgram — design system per design.md
+   "warm cream paper · earthy inks · serif italics · mono HUD · glass surfaces"
+
+   Loaded LAST. Redefines legacy tokens (--primary, --canvas, --hairline, …)
+   to design.md values, so every per-module CSS automatically inherits the
+   new palette without surgery on each file.
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Caveat:wght@400;600&display=swap");
+
+:root {
+  color-scheme: light;
+
+  /* === design.md core palette === */
+  --ink: #2a1c14;
+  --ink-soft: #5a4838;
+  --muted: #a89480;
+  --cream: #fff6ec;
+  --cream-deep: #f2e1c8;
+  --cream-soft: #fffbf2;
+  --clay: #c9a486;
+  --clay-soft: rgba(201, 164, 134, 0.35);
+  --clay-mid: rgba(201, 164, 134, 0.55);
+  --clay-faint: rgba(201, 164, 134, 0.18);
+  --terracotta: #c46848;
+  --terracotta-deep: #a85230;
+  --rose: #d87888;
+  --sage: #9cae94;
+  --blue: #5b8bb5;
+  --navy: #3a4a5c;
+  --shoe: #3a2418;
+  --wood: #6b4a32;
+  --leaf: #6a8a4a;
+  --gold: #e8a74a;
+  --gold-soft: #ffd36e;
+  --opera-pink: #f2a6c0;
+
+  --shadow-warm: rgba(90, 60, 40, 0.15);
+  --shadow-warm-mid: rgba(90, 60, 40, 0.25);
+  --shadow-warm-deep: rgba(90, 60, 40, 0.45);
+
+  /* glass-morphism recipe (design.md §3) */
+  --glass-bg: rgba(255, 246, 236, 0.72);
+  --glass-bg-soft: rgba(255, 246, 236, 0.55);
+  --glass-blur: blur(8px);
+
+  /* === typography === */
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --hand: "Caveat", cursive;
+
+  /* === radii (design.md §8) === */
+  --r-card: 12px;
+  --r-pill: 999px;
+  --r-flash: 14px;
+  --r-kbd: 4px;
+  --r-rect: 8px;
+  --r-round: 50%;
+
+  /* === motion === */
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 0.6, 0.4);
+  --t-snap: 180ms;
+  --t-fast: 250ms;
+  --t-mid: 500ms;
+  --t-slow: 800ms;
+
+  /* === legacy alias map (so every existing CSS file uses design.md tokens
+        with zero edits to var-references) === */
+  --primary: var(--ink);
+  --primary-active: var(--shoe);
+  --primary-light: var(--clay-faint);
+  --primary-hover: var(--shoe);
+  --secondary: var(--terracotta);
+  --secondary-hover: var(--terracotta-deep);
+
+  --body: var(--ink-soft);
+  --hairline: var(--clay-soft);
+  --border-strong: var(--clay);
+
+  --canvas: var(--cream);
+  --surface-soft: var(--cream-soft);
+  --surface-strong: var(--cream-deep);
+  --surface-dark: var(--ink);
+  --surface-dark-elevated: #3a2418;
+
+  --bg-primary: var(--cream);
+  --bg-secondary: var(--cream-soft);
+  --bg-tertiary: var(--cream-deep);
+
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
+  --text-tertiary: var(--muted);
+
+  --border: var(--clay-soft);
+  --border-light: rgba(201, 164, 134, 0.22);
+
+  --link: var(--terracotta);
+  --info: var(--blue);
+  --info-border: var(--blue);
+  --success: var(--leaf);
+  --danger: var(--terracotta);
+  --warning: var(--gold);
+
+  --signature-coral: var(--terracotta);
+  --signature-forest: var(--shoe);
+  --signature-cream: var(--cream-deep);
+  --signature-peach: #e8c4a8;
+  --signature-mint: var(--sage);
+  --signature-yellow: var(--gold-soft);
+
+  --shadow-sm: 0 0 0 1px var(--clay-soft);
+  --shadow: 0 1px 2px var(--shadow-warm), 0 0 0 1px var(--clay-soft);
+  --shadow-md: 0 2px 8px -3px var(--shadow-warm), 0 0 0 1px var(--clay-soft);
+  --shadow-lg: 0 12px 28px -10px var(--shadow-warm-mid), 0 0 0 1px var(--clay-soft);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-md: 10px;
+  --radius-lg: var(--r-card);
+  --radius-pill: var(--r-pill);
+  --radius-full: var(--r-pill);
+
+  --font-sans: var(--sans);
+  --font-display: var(--serif);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(1200px 800px at 100% -10%, rgba(201, 164, 134, 0.16), transparent 55%),
+    radial-gradient(900px 700px at -10% 110%, rgba(196, 104, 72, 0.08), transparent 60%),
+    var(--cream);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* italic serif carries emotion (design.md §2) */
+em, i {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--terracotta);
+}
+
+/* ==========================================================================
+   Typographic personality — apply across all modules
+   ========================================================================== */
+
+/* display + section titles → italic serif */
+h1, h2, h3,
+.modal-title,
+.settings-h, .hub-h,
+.app-title,
+.notes-title,
+.td-title,
+.ui-dialog-title,
+.login-title,
+.empty-text,
+.empty-state h3 {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+/* h-scale */
+h1, .app-title { font-size: clamp(28px, 4vw, 40px); }
+h2, .settings-h, .hub-h, .notes-title, .td-title { font-size: 26px; }
+h3, .modal-title, .ui-dialog-title, .login-title { font-size: 20px; }
+
+/* HUD-style labels — mono uppercase wide-tracked (design.md §2) */
+.tab-count, .tab-badge,
+.kanban-col-count,
+.fr-status,
+.td-label,
+.td-id,
+.td-row label,
+.notes-head,
+.hub-projects-head,
+.todo-projects-head,
+.kanban-col-head,
+.col-action-label,
+.explorer-crumb,
+.explorer-up,
+.login-form label,
+.settings-section h3,
+.form-group label,
+kbd {
+  font-family: var(--mono) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+kbd {
+  border: 1px solid var(--clay-soft);
+  padding: 1px 5px;
+  border-radius: var(--r-kbd);
+  background: var(--cream-soft);
+  font-size: 10px;
+}
+
+/* monetary metadata — mono everywhere */
+.fr-time,
+.td-comment-time,
+.td-meta-val,
+.kanban-task-meta,
+.notes-row-time,
+.col-empty {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* link-card titles + folder names — sans body, but folder names get italic */
+.folder-name,
+.notes-row-title,
+.td-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   Surfaces — glass recipe
+   ========================================================================== */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--clay-soft);
+  border-radius: var(--r-card);
+  box-shadow: 0 4px 20px -8px var(--shadow-warm);
+}
+
+/* common cards/modals get glass automatically */
+.modal-content,
+.ui-dialog,
+.dropdown-menu,
+.settings-menu,
+.task-detail-modal .td-card,
+.slash-menu,
+.ch-popover,
+.login-card {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--clay-soft) !important;
+  box-shadow: 0 24px 48px -16px var(--shadow-warm-mid),
+              0 4px 12px -4px var(--shadow-warm) !important;
+  border-radius: var(--r-card);
+}
+
+.modal {
+  background: rgba(42, 28, 20, 0.32) !important;
+  backdrop-filter: blur(2px);
+}
+
+/* kanban cards = warm paper notes */
+.kanban-task,
+.fr-row,
+.note-page-card,
+.multi-select,
+.td-comment,
+.td-desc {
+  background: var(--cream-soft);
+  border: 1px solid var(--clay-soft);
+  border-radius: var(--r-rect);
+  box-shadow: 0 2px 8px -4px var(--shadow-warm);
+  transition: transform var(--t-fast) var(--ease-soft),
+              box-shadow var(--t-fast) var(--ease-soft),
+              border-color var(--t-fast) var(--ease-soft);
+}
+
+.kanban-task:hover {
+  border-color: var(--clay) !important;
+  box-shadow: 0 6px 16px -6px var(--shadow-warm-mid) !important;
+  transform: translateY(-1px);
+}
+
+.kanban-task.dragging {
+  transform: scale(1.02) rotate(-0.5deg);
+  box-shadow: 0 12px 28px -10px var(--shadow-warm-deep) !important;
+}
+
+/* ==========================================================================
+   Buttons — warm cream w/ clay border, terracotta primary
+   ========================================================================== */
+
+.btn {
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border-radius: var(--r-pill);
+  transition: background var(--t-fast) var(--ease-soft),
+              color var(--t-fast) var(--ease-soft),
+              border-color var(--t-fast) var(--ease-soft),
+              box-shadow var(--t-fast) var(--ease-soft),
+              transform 120ms var(--ease-soft);
+}
+.btn:active { transform: translateY(1px) scale(0.99); }
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--cream);
+  box-shadow: 0 4px 14px -4px var(--shadow-warm-mid);
+}
+.btn-primary:hover {
+  background: var(--shoe);
+  box-shadow: 0 8px 20px -6px var(--shadow-warm-deep);
+}
+
+.btn-secondary {
+  background: var(--cream-soft);
+  color: var(--ink);
+  border: 1px solid var(--clay-soft);
+}
+.btn-secondary:hover {
+  background: var(--cream-deep);
+  border-color: var(--clay);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--clay-soft);
+}
+.btn-outline:hover {
+  background: var(--cream-soft);
+  border-color: var(--clay);
+}
+
+.btn-danger {
+  background: var(--terracotta);
+  color: var(--cream);
+}
+.btn-danger:hover { background: var(--terracotta-deep); }
+
+.btn-sm { border-radius: var(--r-rect); }
+
+/* ==========================================================================
+   Inputs — transparent w/ clay underline focus
+   ========================================================================== */
+
+.input,
+.select,
+.search-input,
+.todo-search,
+.lf-field,
+.td-desc,
+.td-comment-input,
+.note-table th,
+.note-table td,
+textarea,
+input[type="text"],
+input[type="search"],
+input[type="url"],
+input[type="email"],
+input[type="password"] {
+  font-family: var(--sans);
+  background: var(--cream-soft);
+  border: 1px solid var(--clay-soft);
+  border-radius: var(--r-rect);
+  color: var(--ink);
+  transition: border-color var(--t-fast) var(--ease-soft),
+              box-shadow var(--t-fast) var(--ease-soft),
+              background var(--t-fast) var(--ease-soft);
+}
+
+.input:focus,
+.select:focus,
+.search-input:focus,
+.todo-search:focus,
+.td-desc:focus,
+.td-comment-input:focus,
+textarea:focus,
+input:focus {
+  outline: none;
+  border-color: var(--clay) !important;
+  box-shadow: 0 0 0 3px var(--clay-faint) !important;
+  background: var(--cream) !important;
+}
+
+::placeholder { color: var(--muted); opacity: 1; }
+
+/* ==========================================================================
+   Sidebar / nav rows — warm hover, clay underline on active
+   ========================================================================== */
+
+.side-item,
+.tab-btn,
+.proj-row,
+.hub-row,
+.notes-row,
+.col-row,
+.dropdown-item,
+.multi-select-row,
+.slash-item,
+.explorer-tile {
+  transition: background var(--t-fast) var(--ease-soft),
+              color var(--t-fast) var(--ease-soft),
+              border-color var(--t-fast) var(--ease-soft),
+              transform var(--t-snap) var(--ease-soft);
+}
+
+.side-item:hover,
+.tab-btn:hover,
+.proj-row:hover,
+.hub-row:hover,
+.notes-row:hover,
+.col-row:hover,
+.dropdown-item:hover,
+.multi-select-row:hover,
+.slash-item:hover {
+  background: var(--clay-faint) !important;
+}
+
+.side-item.active,
+.tab-btn.active,
+.proj-row.selected,
+.hub-row.selected,
+.notes-row.selected,
+.col-row.selected {
+  background: var(--ink) !important;
+  color: var(--cream) !important;
+}
+
+.side-item.active .side-label,
+.proj-row.selected,
+.hub-row.selected,
+.notes-row.selected {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ==========================================================================
+   Status / accent chips — warm terracotta family
+   ========================================================================== */
+
+.fr-status {
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+}
+.fr-pending { background: var(--cream-deep); color: var(--ink-soft); }
+.fr-planned { background: rgba(232, 196, 168, 0.6); color: var(--shoe); }
+.fr-in-progress { background: rgba(156, 174, 148, 0.55); color: var(--shoe); }
+.fr-done { background: var(--leaf); color: var(--cream); }
+.fr-rejected { background: var(--terracotta); color: var(--cream); }
+
+.kt-prio-highest, .kt-prio-high, .kt-type-bug { background: rgba(196, 104, 72, 0.18) !important; color: var(--terracotta-deep) !important; border-color: var(--clay-soft) !important; }
+.kt-prio-low { background: rgba(106, 138, 74, 0.2) !important; color: var(--leaf) !important; border-color: var(--clay-soft) !important; }
+.kt-prio-lowest { background: var(--cream-deep) !important; color: var(--ink-soft) !important; border-color: var(--clay-soft) !important; }
+.kt-type-story { background: rgba(91, 139, 181, 0.18) !important; color: var(--navy) !important; border-color: var(--clay-soft) !important; }
+.kt-type-epic { background: rgba(216, 120, 136, 0.18) !important; color: var(--rose) !important; border-color: var(--clay-soft) !important; }
+
+/* badges (sidebar counters) */
+.tab-count,
+.tab-badge {
+  background: var(--clay-faint) !important;
+  color: var(--ink-soft) !important;
+  border: 1px solid var(--clay-soft) !important;
+  border-radius: var(--r-pill) !important;
+  padding: 1px 8px;
+  font-weight: 500;
+}
+.tab-btn.active .tab-count,
+.tab-btn.active .tab-badge {
+  background: var(--cream) !important;
+  color: var(--ink) !important;
+}
+
+/* ==========================================================================
+   Selection / drag cues
+   ========================================================================== */
+
+::selection { background: rgba(196, 104, 72, 0.28); color: var(--ink); }
+
+.col-row.drop-into,
+.explorer-tile.drop-into,
+.kanban-list.drag-over {
+  background: var(--clay-faint) !important;
+  outline: 2px dashed var(--clay) !important;
+  outline-offset: -2px;
+}
+.col-row.drop-above { box-shadow: inset 0 3px 0 0 var(--terracotta) !important; }
+.col-row.drop-below { box-shadow: inset 0 -3px 0 0 var(--terracotta) !important; }
+
+/* ==========================================================================
+   Login overlay — cream paper feel
+   ========================================================================== */
+
+.login-overlay {
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(232, 167, 74, 0.25), transparent 60%),
+    radial-gradient(1000px 600px at 100% 110%, rgba(196, 104, 72, 0.18), transparent 55%),
+    rgba(42, 28, 20, 0.45) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.login-tabs {
+  background: var(--cream-deep) !important;
+  border-radius: var(--r-pill);
+  padding: 4px;
+}
+.login-tab {
+  border-radius: var(--r-pill);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+}
+.login-tab.active {
+  background: var(--cream) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 2px 8px -2px var(--shadow-warm) !important;
+}
+
+.login-submit {
+  background: var(--ink) !important;
+  border-radius: var(--r-pill);
+  font-family: var(--sans);
+  letter-spacing: 0.02em;
+}
+.login-submit:hover { background: var(--shoe) !important; }
+
+.login-error {
+  background: rgba(196, 104, 72, 0.12) !important;
+  color: var(--terracotta-deep) !important;
+  border-left-color: var(--terracotta) !important;
+  border-radius: var(--r-rect);
+}
+
+/* ==========================================================================
+   Scrollbars — invisible but room for warm accent
+   ========================================================================== */
+
+* { scrollbar-width: none !important; }
+*::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes lf-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lf-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes lf-pop-in {
+  0%   { opacity: 0; transform: scale(0.96) translateY(-6px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes lf-slide-in-right {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes lf-tape-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(216, 120, 136, 0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(216, 120, 136, 0); }
+}
+
+@keyframes lf-blob-morph {
+  0%, 100% { border-radius: 42% 58% 60% 40% / 50% 45% 55% 50%; }
+  33%      { border-radius: 56% 44% 38% 62% / 43% 60% 40% 57%; }
+  66%      { border-radius: 38% 62% 55% 45% / 60% 40% 60% 40%; }
+}
+
+@keyframes lf-gentle-drift {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+@keyframes lf-flash-in {
+  0%   { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  10%  { opacity: 1; transform: translateY(0) scale(1); }
+  90%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-4px) scale(0.99); }
+}
+
+@keyframes lf-spin {
+  from { transform: rotate(0); }
+  to   { transform: rotate(360deg); }
+}
+
+/* page-level entry: fade + lift */
+body { animation: lf-fade-in 600ms var(--ease-soft) both; }
+
+/* modals / dialogs / dropdowns / popovers — pop in */
+.modal.active .modal-content,
+.ui-dialog,
+.task-detail-modal .td-card,
+.dropdown-menu,
+.settings-menu:not([hidden]),
+.slash-menu,
+.ch-popover:not([hidden]) {
+  animation: lf-pop-in 280ms var(--ease-soft) both;
+}
+
+/* override the legacy keyframe used in popup.css */
+@keyframes modalSlideIn { 0% { opacity: 0; transform: scale(0.96) translateY(-6px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+
+/* iconic dot pulse — for live / unread indicators */
+.lf-pulse,
+.notif-dot,
+.badge-live {
+  animation: lf-tape-pulse 2s var(--ease-soft) infinite;
+}
+
+/* event-flash style toast (if any module uses) */
+.event-flash {
+  animation: lf-flash-in 1800ms var(--ease-soft) both;
+}
+
+/* list items entering: kanban tasks, friend rows, search results */
+.kanban-task,
+.fr-row,
+.proj-row,
+.hub-row,
+.notes-row,
+.multi-select-row,
+.col-row,
+.explorer-tile,
+.dropdown-item,
+.ch-row,
+.slash-item {
+  animation: lf-fade-up 320ms var(--ease-soft) both;
+}
+
+/* new column slide-in (already present in popup.css) — keep but warm easing */
+.tree-column { animation: lf-slide-in-right 450ms var(--ease-soft) both; }
+
+/* loading spinner reused */
+.lf-submit-icon { /* already animated via .login-submit.loading */ }
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Misc fixes — recover roundness from popup/dashboard/playground universal
+   `border-radius:0 !important` (those rules are removed in their CSS files,
+   but in case some component still flattens, restore canonical radii here).
+   ========================================================================== */
+
+.modal-content,
+.ui-dialog,
+.dropdown-menu,
+.settings-menu,
+.login-card,
+.task-detail-modal .td-card,
+.slash-menu { border-radius: var(--r-card); }
+
+.btn { border-radius: var(--r-pill); }
+.btn-sm { border-radius: var(--r-rect); }
+
+.kanban-task,
+.fr-row,
+.note-page-card,
+.multi-select,
+.tab-count,
+.tab-badge,
+.kanban-col-count,
+.fr-status,
+.input,
+.select,
+.search-input,
+.todo-search { border-radius: var(--r-rect); }
+
+.tab-count, .tab-badge, .fr-status, .login-tab, .login-tabs { border-radius: var(--r-pill); }
+
+/* portrait-style avatars round */
+.avatar, .ch-avatar, .login-header .app-icon { border-radius: var(--r-round); }
+
+.login-header .app-icon {
+  background: var(--ink) !important;
+  color: var(--cream) !important;
+  box-shadow: 0 8px 20px -6px var(--shadow-warm-mid);
+}

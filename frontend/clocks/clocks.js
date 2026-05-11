@@ -1,5 +1,5 @@
 (function () {
-  const KEY = 'linkflow.clocks.v1';
+  const KEY = 'urlgram.clocks.v1';
   const grid = document.getElementById('ckGrid');
   const labelEl = document.getElementById('ckLabel');
   const tzEl = document.getElementById('ckTz');
